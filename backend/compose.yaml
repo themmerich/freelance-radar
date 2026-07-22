@@ -1,0 +1,12 @@
+services:
+  postgres:
+    # Major version pinned; keep in sync with TestcontainersConfiguration.
+    image: 'postgres:18'
+    container_name: 'freelance-radar2-db'
+    environment:
+      - 'POSTGRES_DB=freelance_radar'
+      - 'POSTGRES_PASSWORD=secret'
+      - 'POSTGRES_USER=freelance_radar'
+    ports:
+      # Fixed host port so it never collides with the old v1 database (5434).
+      - '5435:5432'
