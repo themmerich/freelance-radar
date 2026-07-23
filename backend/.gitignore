@@ -15,3 +15,9 @@ out/
 
 # VS Code
 .vscode/
+
+# Lokale Secrets (GMX-Zugang; Vorlage: application-local.example.properties)
+application-local.properties
+
+# Startdatum-Merker des Collectors („ab heute"; Datei löschen = Reset)
+.state/

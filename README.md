@@ -20,8 +20,10 @@ Obsidian-Vault: `02 Projekte/Freelance Radar 2.md`.
 | [`scripts/`](scripts/)                       | Repo verification — shared check runner, full-suite verify, Claude Code Stop hook         |
 
 Das Repo basiert auf dem tapout-ai-Referenz-Setup (Angular/Spring-Boot-Monorepo mit
-Style-Guides, Skills, Sheriff-Modulgrenzen und Verify-Skripten). Die `notes`-Demo-Slice
-aus dem Template dient als Vorlage für die `offers`-Slice und wird in Phase 1 ersetzt.
+Style-Guides, Skills, Sheriff-Modulgrenzen und Verify-Skripten). Die vertikale Slice:
+Flyway-Schema (`offers`, `offer_skills`, `runs`) → JPA → `ImapService`/`ParserService`
+→ REST (`GET /api/offers`, `POST /api/runs`) → Angular-Dashboard (Sheriff-Scope
+`offers`) mit Abruf-Button und Angebotstabelle.
 
 ## Prerequisites
 
