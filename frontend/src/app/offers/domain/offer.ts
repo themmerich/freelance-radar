@@ -16,12 +16,14 @@ export type Offer = {
   sourceType: SourceType;
   agentName: string | null;
   projectTitle: string | null;
+  company: string | null;
   role: string | null;
   location: string | null;
   remote: Remote | null;
   rate: string | null;
   startDate: string | null;
   duration: string | null;
+  projectUrl: string | null;
   matchScore: number | null;
   matchReason: string | null;
   seniority: string | null;

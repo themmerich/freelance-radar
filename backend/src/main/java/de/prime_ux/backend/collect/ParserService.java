@@ -2,6 +2,7 @@ package de.prime_ux.backend.collect;
 
 import de.prime_ux.backend.offer.Remote;
 import de.prime_ux.backend.offer.SourceType;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -9,12 +10,38 @@ import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 
 /**
- * Regelbasierte Erstauswertung einer Mail (portiert aus v1 collect.py):
- * Klassifizierung Agent/Privat/Newsletter, Zuordnung zu einem der konfigurierten
- * Suchagenten und grobe Feld-Extraktion. Das LLM verfeinert ab Phase 2.
+ * Regelbasierte Auswertung einer freelancermap-Mail.
+ *
+ * <p>Agent-Mails haben den Betreff {@code <Agentenname> - Anzahl neue Projekte: N} und
+ * 1..n Projekt-Blöcke im Body (durch {@code -----} getrennt) mit Titel, Firma, Ort,
+ * Remote-Prozent, Start und einer {@code /nproj/<id>.html}-URL — die ID ist der stabile
+ * Dedup-Schlüssel, wenn mehrere Agenten dasselbe Projekt einfangen. Für alle anderen
+ * Mails greifen die v1-Heuristiken (Klassifizierung + grobe Feld-Extraktion).
  */
 @Service
 public class ParserService {
+
+	private static final Pattern AGENT_SUBJECT = Pattern.compile("^(.{2,60}?)\\s*-\\s*Anzahl neue Projekte:\\s*\\d+");
+	private static final Pattern BLOCK_SEPARATOR = Pattern.compile("(?m)^-{5,}\\s*$");
+	private static final Pattern NPROJ_URL = Pattern.compile("https?://www\\.freelancermap\\.de/nproj/(\\d+)\\.html\\S*");
+	/** Interne Referenz am Titelende, z.B. "(10266-20260723)" — nicht Teil des Titels. */
+	private static final Pattern EXTERNAL_REF = Pattern.compile("\\s*\\(\\d+-\\d+\\)$");
+	private static final Pattern BLOCK_COMPANY = Pattern.compile("(?m)^von:\\s*(.+)$");
+	private static final Pattern BLOCK_LOCATION = Pattern.compile("(?m)^Ort:\\s*(.+)$");
+	private static final Pattern BLOCK_REMOTE = Pattern.compile("(?m)^Remote:\\s*(\\d+)\\s*%");
+	private static final Pattern BLOCK_START = Pattern.compile("(?m)^Start:\\s*(.+)$");
+
+	private static final List<String> PRIVATE_HINTS = List.of(
+		"persönliche nachricht",
+		"private nachricht",
+		"hat ihnen eine nachricht",
+		"möchte sie kontaktieren",
+		"direkt kontaktiert",
+		"anfrage von",
+		"nachricht von",
+		"hat ihr profil",
+		"interessiert an ihrem profil"
+	);
 
 	private static final List<String> AGENT_HINTS = List.of(
 		"projektagent",
@@ -29,18 +56,6 @@ public class ParserService {
 		"neue projekte für sie"
 	);
 
-	private static final List<String> PRIVATE_HINTS = List.of(
-		"persönliche nachricht",
-		"private nachricht",
-		"hat ihnen eine nachricht",
-		"möchte sie kontaktieren",
-		"direkt kontaktiert",
-		"anfrage von",
-		"nachricht von",
-		"hat ihr profil",
-		"interessiert an ihrem profil"
-	);
-
 	private static final List<String> NEWSLETTER_HINTS = List.of(
 		"newsletter",
 		"magazin",
@@ -49,31 +64,27 @@ public class ParserService {
 		"tipps für freelancer"
 	);
 
-	private static final Pattern AGENT_NAME = Pattern.compile(
-		"(?:suchagent|projektagent|suchprofil)[:\\s\"»]+([\\wÄÖÜäöüß/+\\- ]{3,40})",
-		Pattern.CASE_INSENSITIVE
-	);
-	private static final Pattern TITLE = Pattern.compile(
+	private static final Pattern FALLBACK_TITLE = Pattern.compile(
 		"(?:projekt|projektangebot|neues projekt)[:\\-\\s]+(.{5,120})",
 		Pattern.CASE_INSENSITIVE
 	);
-	private static final Pattern FULL_REMOTE = Pattern.compile(
+	private static final Pattern FALLBACK_FULL_REMOTE = Pattern.compile(
 		"\\b(100%\\s*remote|voll\\s*remote|remote möglich|komplett remote)\\b"
 	);
-	private static final Pattern ONSITE = Pattern.compile("\\b(vor ort|onsite|präsenz)\\b");
-	private static final Pattern LOCATION = Pattern.compile(
+	private static final Pattern FALLBACK_ONSITE = Pattern.compile("\\b(vor ort|onsite|präsenz)\\b");
+	private static final Pattern FALLBACK_LOCATION = Pattern.compile(
 		"(?:einsatzort|standort|ort)[:\\s]+([A-Za-zÄÖÜäöüß.\\- ]{2,40})",
 		Pattern.CASE_INSENSITIVE
 	);
-	private static final Pattern RATE = Pattern.compile(
+	private static final Pattern FALLBACK_RATE = Pattern.compile(
 		"(?:stundensatz|tagessatz|rate|vergütung)[:\\s]*([0-9.,]+\\s*(?:€|eur)[^\\n]{0,20})",
 		Pattern.CASE_INSENSITIVE
 	);
-	private static final Pattern START = Pattern.compile(
+	private static final Pattern FALLBACK_START = Pattern.compile(
 		"(?:start|beginn|projektstart)[:\\s]+([A-Za-z0-9./ ]{3,25})",
 		Pattern.CASE_INSENSITIVE
 	);
-	private static final Pattern DURATION = Pattern.compile(
+	private static final Pattern FALLBACK_DURATION = Pattern.compile(
 		"(?:dauer|laufzeit|projektdauer)[:\\s]+([A-Za-z0-9./ ]{2,30})",
 		Pattern.CASE_INSENSITIVE
 	);
@@ -84,20 +95,71 @@ public class ParserService {
 		this.properties = properties;
 	}
 
-	public ParsedOffer parse(String subject, String body) {
-		String text = subject + "\n" + body;
-		String lower = text.toLowerCase(Locale.ROOT);
+	public ParsedMail parse(String subject, String body) {
+		String trimmedSubject = subject == null ? "" : subject.strip();
+		Matcher agentSubject = AGENT_SUBJECT.matcher(trimmedSubject);
+		boolean isAgentSubject = agentSubject.find();
+		List<ParsedProject> projects = projectBlocks(body);
 
-		return new ParsedOffer(
-			classify(lower),
-			agentName(text, lower),
-			projectTitle(subject),
-			firstGroup(LOCATION, body),
-			remote(lower),
-			truncate(firstGroup(RATE, body), 60),
-			truncate(firstGroup(START, body), 40),
-			truncate(firstGroup(DURATION, body), 40)
-		);
+		if (isAgentSubject || !projects.isEmpty()) {
+			String agentName = isAgentSubject ? agentSubject.group(1).strip() : configuredAgent(lower(trimmedSubject, body));
+			List<ParsedProject> result = projects.isEmpty() ? List.of(fallbackProject(trimmedSubject, body)) : projects;
+			return new ParsedMail(SourceType.AGENT, agentName, result);
+		}
+
+		String lower = lower(trimmedSubject, body);
+		return new ParsedMail(classify(lower), configuredAgent(lower), List.of(fallbackProject(trimmedSubject, body)));
+	}
+
+	/** Zerlegt den Body in Projekt-Blöcke; nur Blöcke mit "Erstellt:" und nproj-URL zählen. */
+	private List<ParsedProject> projectBlocks(String body) {
+		List<ParsedProject> projects = new ArrayList<>();
+		for (String block : BLOCK_SEPARATOR.split(body == null ? "" : body)) {
+			Matcher url = NPROJ_URL.matcher(block);
+			if (!block.contains("Erstellt:") || !url.find()) {
+				continue;
+			}
+			projects.add(
+				new ParsedProject(
+					blockTitle(block),
+					firstGroup(BLOCK_COMPANY, block),
+					firstGroup(BLOCK_LOCATION, block),
+					remoteFromPercent(firstGroup(BLOCK_REMOTE, block)),
+					null,
+					firstGroup(BLOCK_START, block),
+					null,
+					Long.valueOf(url.group(1)),
+					url.group()
+				)
+			);
+		}
+		return projects;
+	}
+
+	/** Titel = letzte nicht-leere Zeile vor "Erstellt:", ohne interne Referenz am Ende. */
+	private String blockTitle(String block) {
+		String title = null;
+		for (String line : block.split("\\n")) {
+			String stripped = line.strip();
+			if (stripped.startsWith("Erstellt:")) {
+				break;
+			}
+			if (!stripped.isEmpty()) {
+				title = stripped;
+			}
+		}
+		return title == null ? null : truncate(EXTERNAL_REF.matcher(title).replaceFirst(""), 200);
+	}
+
+	private Remote remoteFromPercent(String percent) {
+		if (percent == null) {
+			return null;
+		}
+		int value = Integer.parseInt(percent);
+		if (value == 0) {
+			return Remote.ONSITE;
+		}
+		return value >= 100 ? Remote.REMOTE : Remote.HYBRID;
 	}
 
 	private SourceType classify(String lower) {
@@ -113,38 +175,46 @@ public class ParserService {
 		return SourceType.OTHER;
 	}
 
-	/** Bevorzugt einen der konfigurierten Agenten-Namen; sonst das v1-Regex-Muster. */
-	private String agentName(String text, String lower) {
-		for (String agent : properties.agents()) {
-			if (lower.contains(agent.toLowerCase(Locale.ROOT))) {
-				return agent;
-			}
-		}
-		Matcher matcher = AGENT_NAME.matcher(text);
-		return matcher.find() ? matcher.group(1).strip() : null;
+	private String configuredAgent(String lower) {
+		return properties
+			.agents()
+			.stream()
+			.filter(agent -> lower.contains(agent.toLowerCase(Locale.ROOT)))
+			.findFirst()
+			.orElse(null);
 	}
 
-	private String projectTitle(String subject) {
-		Matcher matcher = TITLE.matcher(subject);
-		String title = matcher.find() ? matcher.group(1) : subject;
-		return truncate(title.strip(), 200);
+	/** v1-Heuristik für Mails ohne strukturierte Projekt-Blöcke. */
+	private ParsedProject fallbackProject(String subject, String body) {
+		String lower = lower(subject, body);
+		Matcher title = FALLBACK_TITLE.matcher(subject);
+		Remote remote = null;
+		if (FALLBACK_FULL_REMOTE.matcher(lower).find()) {
+			remote = Remote.REMOTE;
+		} else if (lower.contains("hybrid") || lower.contains("teilweise remote")) {
+			remote = Remote.HYBRID;
+		} else if (FALLBACK_ONSITE.matcher(lower).find()) {
+			remote = Remote.ONSITE;
+		}
+		return new ParsedProject(
+			truncate((title.find() ? title.group(1) : subject).strip(), 200),
+			null,
+			firstGroup(FALLBACK_LOCATION, body),
+			remote,
+			truncate(firstGroup(FALLBACK_RATE, body), 60),
+			truncate(firstGroup(FALLBACK_START, body), 40),
+			truncate(firstGroup(FALLBACK_DURATION, body), 40),
+			null,
+			null
+		);
 	}
 
-	private Remote remote(String lower) {
-		if (FULL_REMOTE.matcher(lower).find()) {
-			return Remote.REMOTE;
-		}
-		if (lower.contains("hybrid") || lower.contains("teilweise remote")) {
-			return Remote.HYBRID;
-		}
-		if (ONSITE.matcher(lower).find()) {
-			return Remote.ONSITE;
-		}
-		return null;
+	private String lower(String subject, String body) {
+		return (subject + "\n" + body).toLowerCase(Locale.ROOT);
 	}
 
-	private String firstGroup(Pattern pattern, String body) {
-		Matcher matcher = pattern.matcher(body);
+	private String firstGroup(Pattern pattern, String text) {
+		Matcher matcher = pattern.matcher(text == null ? "" : text);
 		return matcher.find() ? matcher.group(1).strip() : null;
 	}
 
