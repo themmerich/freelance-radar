@@ -1,24 +1,36 @@
 {
-  "title": "PrimeNG + Transloco Test",
-  "description": "Wenn dieser Text die Sprache wechselt und der Button einen Toast zeigt, sind PrimeNG und Transloco korrekt eingebunden.",
-  "nameLabel": "Dein Name",
-  "namePlaceholder": "Hier tippen…",
-  "greeting": "Hallo, {{name}} 👋",
-  "stranger": "Unbekannte:r",
-  "showToast": "Toast anzeigen",
-  "language": "Sprache",
-  "toastSummary": "Es funktioniert!",
-  "toastDetail": "Hallo {{name}} — {{count}}× geklickt.",
-  "notes": {
-    "title": "Notizen",
-    "titleLabel": "Titel",
-    "titlePlaceholder": "Titel der Notiz",
-    "contentLabel": "Inhalt",
-    "contentPlaceholder": "Notiz schreiben…",
-    "add": "Notiz hinzufügen",
-    "delete": "Notiz löschen",
-    "empty": "Noch keine Notizen. Füge oben deine erste hinzu.",
-    "loadError": "Notizen konnten nicht geladen werden.",
-    "required": "Dieses Feld ist erforderlich."
+  "offers": {
+    "title": "Freelance Radar",
+    "collect": "Mails abrufen",
+    "lastRun": "Letzter Lauf: {{newOffers}} neu von {{totalSeen}} gesehen",
+    "noRunYet": "Noch kein Lauf — jetzt Mails abrufen.",
+    "collectError": "Der Abruf ist fehlgeschlagen. GMX-Zugangsdaten und Verbindung prüfen.",
+    "loadError": "Angebote konnten nicht geladen werden.",
+    "empty": "Noch keine Angebote. Über den Button oben Mails abrufen.",
+    "table": {
+      "received": "Eingegangen",
+      "source": "Quelle",
+      "agent": "Agent",
+      "title": "Projekt",
+      "location": "Ort",
+      "remote": "Remote",
+      "status": "Status"
+    },
+    "source": {
+      "AGENT": "Agent",
+      "PRIVATE": "Privat",
+      "NEWSLETTER": "Newsletter",
+      "OTHER": "Sonstiges"
+    },
+    "remote": {
+      "REMOTE": "Remote",
+      "HYBRID": "Hybrid",
+      "ONSITE": "Vor Ort"
+    },
+    "status": {
+      "NEW": "Neu",
+      "ANALYZED": "Analysiert",
+      "ERROR": "Fehler"
+    }
   }
 }

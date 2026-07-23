@@ -1,24 +1,36 @@
 {
-  "title": "PrimeNG + Transloco Smoke Test",
-  "description": "If this text switches language and the button shows a toast, both PrimeNG and Transloco are wired up correctly.",
-  "nameLabel": "Your name",
-  "namePlaceholder": "Type here…",
-  "greeting": "Hello, {{name}} 👋",
-  "stranger": "stranger",
-  "showToast": "Show toast",
-  "language": "Language",
-  "toastSummary": "It works!",
-  "toastDetail": "Hello {{name}} — clicked {{count}} time(s).",
-  "notes": {
-    "title": "Notes",
-    "titleLabel": "Title",
-    "titlePlaceholder": "Note title",
-    "contentLabel": "Content",
-    "contentPlaceholder": "Write your note…",
-    "add": "Add note",
-    "delete": "Delete note",
-    "empty": "No notes yet. Add your first one above.",
-    "loadError": "Could not load notes.",
-    "required": "This field is required."
+  "offers": {
+    "title": "Freelance Radar",
+    "collect": "Fetch mails",
+    "lastRun": "Last run: {{newOffers}} new of {{totalSeen}} seen",
+    "noRunYet": "No run yet — fetch mails now.",
+    "collectError": "Fetching failed. Check the GMX credentials and connection.",
+    "loadError": "Offers could not be loaded.",
+    "empty": "No offers yet. Fetch mails with the button above.",
+    "table": {
+      "received": "Received",
+      "source": "Source",
+      "agent": "Agent",
+      "title": "Project",
+      "location": "Location",
+      "remote": "Remote",
+      "status": "Status"
+    },
+    "source": {
+      "AGENT": "Agent",
+      "PRIVATE": "Private",
+      "NEWSLETTER": "Newsletter",
+      "OTHER": "Other"
+    },
+    "remote": {
+      "REMOTE": "Remote",
+      "HYBRID": "Hybrid",
+      "ONSITE": "On-site"
+    },
+    "status": {
+      "NEW": "New",
+      "ANALYZED": "Analyzed",
+      "ERROR": "Error"
+    }
   }
 }

@@ -7,6 +7,7 @@ monorepo-wide conventions (git/PR workflow, secrets, layout).
 
 - **Spring Boot 4.1**, **Java 25**, **Gradle** (Kotlin DSL, `build.gradle.kts`)
 - Spring Data JPA, **Flyway** (PostgreSQL), Bean Validation, Spring Web MVC
+- **jakarta.mail** (via `spring-boot-starter-mail`) für den IMAP-Abruf (GMX)
 - **Lombok** (compile-time), Spring Boot DevTools, Spring Boot Docker Compose
 - Base package: `de.prime_ux.backend`
 
@@ -35,3 +36,7 @@ Use the Gradle wrapper (`./gradlew`); do not rely on a globally installed Gradle
 - **Tests never use a locally running database.** Integration tests import
   `TestcontainersConfiguration` (in `src/test/java`), which provisions a PostgreSQL
   container via Testcontainers and `@ServiceConnection` — only Docker is required.
+- **Tests never touch a real mailbox.** `CollectService` depends on the `MailSource`
+  interface; tests stub it (`@Primary`-Bean) statt `ImapService`.
+- **GMX-Zugangsdaten** liegen nur in der git-ignorierten `application-local.properties`
+  (Vorlage: `application-local.example.properties`) — niemals committen.
