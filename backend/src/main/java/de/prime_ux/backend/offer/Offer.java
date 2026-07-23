@@ -23,8 +23,11 @@ public class Offer {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@Column(name = "message_id", nullable = false, unique = true, columnDefinition = "text")
+	@Column(name = "message_id", nullable = false, columnDefinition = "text")
 	private String messageId;
+
+	@Column(name = "project_index", nullable = false)
+	private int projectIndex;
 
 	@Column(name = "received_at", nullable = false)
 	private Instant receivedAt;
@@ -48,6 +51,15 @@ public class Offer {
 
 	@Column(name = "project_title", columnDefinition = "text")
 	private String projectTitle;
+
+	@Column(columnDefinition = "text")
+	private String company;
+
+	@Column(name = "fm_project_id")
+	private Long fmProjectId;
+
+	@Column(name = "project_url", columnDefinition = "text")
+	private String projectUrl;
 
 	@Column(columnDefinition = "text")
 	private String role;

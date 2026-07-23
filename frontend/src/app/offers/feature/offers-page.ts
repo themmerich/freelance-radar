@@ -54,16 +54,24 @@ import { OfferTable, OfferRow } from '../ui/offer-table';
 export class OffersPage {
   protected readonly store = inject(OffersStore);
 
+  // Springen mehrere Agenten auf dasselbe Projekt an, erscheint nur der primäre
+  // Eintrag — mit dupCount-Badge statt Doppelzeile (Toggle kommt in Phase 3).
   protected readonly rows = computed<OfferRow[]>(() =>
-    this.store.offers().map((offer) => ({
-      id: offer.id,
-      receivedAt: offer.receivedAt,
-      sourceType: offer.sourceType,
-      agentName: offer.agentName,
-      title: offer.projectTitle ?? offer.subject,
-      location: offer.location,
-      remote: offer.remote,
-      status: offer.status,
-    })),
+    this.store
+      .offers()
+      .filter((offer) => offer.primary)
+      .map((offer) => ({
+        id: offer.id,
+        receivedAt: offer.receivedAt,
+        sourceType: offer.sourceType,
+        agentName: offer.agentName,
+        title: offer.projectTitle ?? offer.subject,
+        company: offer.company,
+        location: offer.location,
+        remote: offer.remote,
+        dupCount: offer.dupCount,
+        projectUrl: offer.projectUrl,
+        status: offer.status,
+      })),
   );
 }

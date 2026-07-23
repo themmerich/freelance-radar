@@ -7,11 +7,13 @@
     "collectError": "Der Abruf ist fehlgeschlagen. GMX-Zugangsdaten und Verbindung prüfen.",
     "loadError": "Angebote konnten nicht geladen werden.",
     "empty": "Noch keine Angebote. Über den Button oben Mails abrufen.",
+    "dupBadge": "{{count}}× gestreut",
     "table": {
       "received": "Eingegangen",
       "source": "Quelle",
       "agent": "Agent",
       "title": "Projekt",
+      "company": "Firma",
       "location": "Ort",
       "remote": "Remote",
       "status": "Status"

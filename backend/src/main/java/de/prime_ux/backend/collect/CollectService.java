@@ -11,7 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Ein Abruf-Lauf: Mails seit dem Startdatum holen, per Message-ID deduplizieren,
- * heuristisch parsen, als status=NEW speichern und den Lauf protokollieren.
+ * pro Projekt-Block ein Offer mit status=NEW speichern und den Lauf protokollieren.
+ * Springen mehrere Agenten auf dasselbe Projekt an (gleiche freelancermap-ID),
+ * wird nur der erste Eintrag primär — die Kopien zählen den dup_count hoch.
  * Verbraucht keine Tokens — die Claude-Analyse kommt erst in Phase 2.
  */
 @Service
@@ -50,26 +52,53 @@ public class CollectService {
 			if (offers.existsByMessageId(mail.messageId())) {
 				continue;
 			}
-			offers.save(toOffer(mail));
-			newCount++;
+			newCount += saveOffers(mail);
 		}
 
 		return runs.save(new Run(newCount, mails.size(), "since=" + since));
 	}
 
-	private Offer toOffer(FetchedMail mail) {
-		Offer offer = new Offer(mail.messageId(), mail.receivedAt(), mail.fromAddr(), mail.subject());
-		ParsedOffer parsed = parser.parse(mail.subject(), mail.body());
-		offer.setSourceType(parsed.sourceType());
-		offer.setAgentName(parsed.agentName());
-		offer.setProjectTitle(parsed.projectTitle());
-		offer.setLocation(parsed.location());
-		offer.setRemote(parsed.remote());
-		offer.setRate(parsed.rate());
-		offer.setStartDate(parsed.startDate());
-		offer.setDuration(parsed.duration());
-		offer.setRawBody(truncateBody(mail.body()));
-		return offer;
+	private int saveOffers(FetchedMail mail) {
+		ParsedMail parsed = parser.parse(mail.subject(), mail.body());
+		int index = 0;
+		for (ParsedProject project : parsed.projects()) {
+			Offer offer = new Offer(mail.messageId(), mail.receivedAt(), mail.fromAddr(), mail.subject());
+			offer.setProjectIndex(index++);
+			offer.setSourceType(parsed.sourceType());
+			offer.setAgentName(parsed.agentName());
+			offer.setProjectTitle(project.title());
+			offer.setCompany(project.company());
+			offer.setLocation(project.location());
+			offer.setRemote(project.remote());
+			offer.setRate(project.rate());
+			offer.setStartDate(project.startDate());
+			offer.setDuration(project.duration());
+			offer.setFmProjectId(project.fmProjectId());
+			offer.setProjectUrl(project.url());
+			offer.setRawBody(truncateBody(mail.body()));
+			markDuplicate(offer);
+			offers.save(offer);
+		}
+		return index;
+	}
+
+	/**
+	 * Cross-Agent-Dedup: Projekte mit freelancermap-ID bilden eine Gruppe. Existiert
+	 * schon ein primärer Eintrag, wird das neue Offer als Kopie markiert und der
+	 * dup_count des primären hochgezählt (Badge „N×" im Dashboard).
+	 */
+	private void markDuplicate(Offer offer) {
+		if (offer.getFmProjectId() == null) {
+			return;
+		}
+		String dupGroup = "fm-" + offer.getFmProjectId();
+		offer.setDupGroup(dupGroup);
+		offers
+			.findFirstByDupGroupAndPrimaryTrue(dupGroup)
+			.ifPresent(primary -> {
+				offer.setPrimary(false);
+				primary.setDupCount(primary.getDupCount() + 1);
+			});
 	}
 
 	private String truncateBody(String body) {

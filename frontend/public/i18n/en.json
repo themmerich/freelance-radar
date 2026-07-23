@@ -7,11 +7,13 @@
     "collectError": "Fetching failed. Check the GMX credentials and connection.",
     "loadError": "Offers could not be loaded.",
     "empty": "No offers yet. Fetch mails with the button above.",
+    "dupBadge": "spread {{count}}×",
     "table": {
       "received": "Received",
       "source": "Source",
       "agent": "Agent",
       "title": "Project",
+      "company": "Company",
       "location": "Location",
       "remote": "Remote",
       "status": "Status"

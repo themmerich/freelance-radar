@@ -4,23 +4,36 @@ const OFFER = {
   id: 1,
   receivedAt: '2026-07-22T09:15:00Z',
   fromAddr: 'office@freelancermap.de',
-  subject: 'Neues Projekt passend zu Ihrem Suchprofil "Angular"',
+  subject: 'Angular - Anzahl neue Projekte: 1',
   sourceType: 'AGENT',
   agentName: 'Angular',
   projectTitle: 'Senior Angular Entwickler',
+  company: 'softwareXperts GmbH',
   role: null,
   location: 'Hamburg',
   remote: 'REMOTE',
   rate: null,
   startDate: null,
   duration: null,
+  projectUrl: 'https://www.freelancermap.de/nproj/3026991.html',
   matchScore: null,
   matchReason: null,
   seniority: null,
   industry: null,
   primary: true,
-  dupCount: 1,
+  dupCount: 2,
   status: 'NEW',
+};
+
+// Dieselbe freelancermap-Projekt-ID über einen zweiten Agenten: nicht primär,
+// darf im Dashboard nicht als eigene Zeile auftauchen.
+const DUPLICATE_OFFER = {
+  ...OFFER,
+  id: 2,
+  subject: 'Java Spring - Anzahl neue Projekte: 1',
+  agentName: 'Java Spring',
+  primary: false,
+  dupCount: 1,
 };
 
 const RUN = {
@@ -38,7 +51,7 @@ const RUN = {
 // Boot instance: before a run the API is empty, afterwards it returns one offer.
 async function mockApi(page: Page): Promise<{ collected: () => boolean }> {
   let collected = false;
-  await page.route('**/api/offers', (route) => route.fulfill({ json: collected ? [OFFER] : [] }));
+  await page.route('**/api/offers', (route) => route.fulfill({ json: collected ? [OFFER, DUPLICATE_OFFER] : [] }));
   await page.route('**/api/runs/latest', (route) => (collected ? route.fulfill({ json: RUN }) : route.fulfill({ status: 204 })));
   await page.route('**/api/runs', (route) => {
     collected = true;
@@ -70,6 +83,15 @@ test.describe('Offers dashboard e2e', () => {
     await expect(page.getByRole('cell', { name: 'Senior Angular Entwickler' })).toBeVisible();
     await expect(page.getByRole('cell', { name: 'Hamburg' })).toBeVisible();
     await expect(page.getByText('Last run: 1 new of 1 seen')).toBeVisible();
+  });
+
+  test('collapses the same project caught by two agents into one badged row', async ({ page }) => {
+    await page.getByRole('button', { name: 'Fetch mails' }).click();
+
+    // Only the primary row is rendered — with the spread badge instead of a duplicate line.
+    await expect(page.getByRole('cell', { name: /Senior Angular Entwickler/ })).toHaveCount(1);
+    await expect(page.getByText('spread 2×')).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'Java Spring' })).toHaveCount(0);
   });
 
   test('shows an error message when the collect run fails', async ({ page }) => {
