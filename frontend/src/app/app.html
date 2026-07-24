@@ -1,1 +1,12 @@
+<ng-container *transloco="let t">
+  <header class="mx-auto flex w-full max-w-7xl items-center gap-8 px-6 pt-4">
+    <span class="font-semibold">📡 Freelance Radar</span>
+    <nav class="flex gap-4" [attr.aria-label]="t('nav.label')">
+      <a routerLink="/" routerLinkActive="font-medium text-primary" [routerLinkActiveOptions]="{ exact: true }" class="hover:underline">{{
+        t('nav.dashboard')
+      }}</a>
+      <a routerLink="/profil" routerLinkActive="font-medium text-primary" class="hover:underline">{{ t('nav.profiles') }}</a>
+    </nav>
+  </header>
+</ng-container>
 <router-outlet />

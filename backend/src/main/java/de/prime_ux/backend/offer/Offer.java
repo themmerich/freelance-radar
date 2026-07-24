@@ -83,12 +83,6 @@ public class Offer {
 	@Column(columnDefinition = "text")
 	private String duration;
 
-	@Column(name = "match_score")
-	private Integer matchScore;
-
-	@Column(name = "match_reason", columnDefinition = "text")
-	private String matchReason;
-
 	@Column(columnDefinition = "text")
 	private String seniority;
 

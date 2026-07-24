@@ -23,10 +23,12 @@ Das Repo basiert auf dem tapout-ai-Referenz-Setup (Angular/Spring-Boot-Monorepo 
 Style-Guides, Skills, Sheriff-Modulgrenzen und Verify-Skripten). Die vertikale Slice:
 Flyway-Schema (`offers`, `offer_skills`, `runs`) → JPA → `ImapService`/`ParserService`
 → `AnalysisService` (Spring AI, `claude-haiku-4-5`, ein Batch-Request pro Lauf mit
-Kostendeckel) → REST (`GET /api/offers`, `POST /api/runs`) → Angular-Dashboard
-(Sheriff-Scope `offers`) mit KPI-Kacheln, 6 Auswertungs-Charts (Chart.js),
-Score-Ampel mit einstellbaren Schwellen, Duplikat-Toggle, Kostenanzeige und
-Detail-Ansicht.
+Kostendeckel, Ergebnisse pro **Profil**) → REST (`GET /api/offers`, `POST /api/runs`,
+`/api/profiles`, `/api/analyses`) → Angular-App mit zwei Tabs: **Dashboard**
+(Sheriff-Scope `offers`: KPI-Kacheln, 6 Charts, Score-Ampel mit einstellbaren
+Schwellen, Duplikat-Toggle, Profil-Umschalter, Kostenanzeige, Detail-Ansicht) und
+**Profil-Verwaltung** (Scope `profiles`: mehrere Profile anlegen/aktivieren,
+Skills als Chip-Listen, Re-Analyse mit Zeitraum und Kostenvorschau).
 
 ## Prerequisites
 

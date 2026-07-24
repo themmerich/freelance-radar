@@ -6,25 +6,33 @@ import java.io.Serializable;
 import java.util.Objects;
 
 @Embeddable
-public class OfferSkillId implements Serializable {
+public class OfferAnalysisSkillId implements Serializable {
 
 	@Column(name = "offer_id", nullable = false)
 	private Long offerId;
 
+	@Column(name = "profile_id", nullable = false)
+	private Long profileId;
+
 	@Column(nullable = false, columnDefinition = "text")
 	private String skill;
 
-	protected OfferSkillId() {
+	protected OfferAnalysisSkillId() {
 		// Required by JPA.
 	}
 
-	public OfferSkillId(Long offerId, String skill) {
+	public OfferAnalysisSkillId(Long offerId, Long profileId, String skill) {
 		this.offerId = offerId;
+		this.profileId = profileId;
 		this.skill = skill;
 	}
 
 	public Long getOfferId() {
 		return offerId;
+	}
+
+	public Long getProfileId() {
+		return profileId;
 	}
 
 	public String getSkill() {
@@ -36,14 +44,14 @@ public class OfferSkillId implements Serializable {
 		if (this == other) {
 			return true;
 		}
-		if (!(other instanceof OfferSkillId that)) {
+		if (!(other instanceof OfferAnalysisSkillId that)) {
 			return false;
 		}
-		return Objects.equals(offerId, that.offerId) && Objects.equals(skill, that.skill);
+		return Objects.equals(offerId, that.offerId) && Objects.equals(profileId, that.profileId) && Objects.equals(skill, that.skill);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(offerId, skill);
+		return Objects.hash(offerId, profileId, skill);
 	}
 }

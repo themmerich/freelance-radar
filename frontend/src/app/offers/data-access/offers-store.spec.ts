@@ -60,8 +60,13 @@ describe('OffersStore', () => {
 
   // httpResource issues its GETs from an effect: tick() runs it, then we answer
   // and await stability so the resource values propagate to the signals.
+  // Die Profil-Liste lädt nur beim ersten Tick (und nach switchProfile) — daher
+  // per match() statt expectOne() beantworten.
   async function respondToReloads(offers: Offer[], run: Run | null): Promise<void> {
     TestBed.tick();
+    httpMock
+      .match((req) => req.method === 'GET' && req.url === '/api/profiles')
+      .forEach((request) => request.flush([{ id: 1, name: 'Standard', active: true }]));
     httpMock.expectOne((req) => req.method === 'GET' && req.url === '/api/offers').flush(offers);
     httpMock.expectOne((req) => req.method === 'GET' && req.url === '/api/runs/latest').flush(run);
     await TestBed.inject(ApplicationRef).whenStable();
@@ -87,6 +92,31 @@ describe('OffersStore', () => {
     await respondToReloads([OFFER], RUN);
     expect(store.isCollecting()).toBe(false);
     expect(store.hasCollectError()).toBe(false);
+    expect(store.offers()).toEqual([OFFER]);
+  });
+
+  it('switches the profile and reloads offers from its perspective', async () => {
+    await respondToReloads([], null);
+
+    store.switchProfile(2);
+
+    httpMock
+      .expectOne((req) => req.method === 'POST' && req.url === '/api/profiles/2/activate')
+      .flush({ id: 2, name: 'Fullstack', active: true });
+
+    TestBed.tick();
+    httpMock
+      .match((req) => req.method === 'GET' && req.url === '/api/profiles')
+      .forEach((request) =>
+        request.flush([
+          { id: 1, name: 'Standard', active: false },
+          { id: 2, name: 'Fullstack', active: true },
+        ]),
+      );
+    httpMock.expectOne((req) => req.method === 'GET' && req.url === '/api/offers').flush([OFFER]);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.profileOptions().find((profile) => profile.active)?.name).toBe('Fullstack');
     expect(store.offers()).toEqual([OFFER]);
   });
 

@@ -2,8 +2,8 @@ package de.prime_ux.backend.analyze;
 
 import java.util.List;
 
-/** Bewertung eines einzelnen Angebots durch das LLM. */
-public record OfferAnalysis(
+/** Bewertung eines einzelnen Angebots durch das LLM (gegen ein konkretes Profil). */
+public record OfferAssessment(
 	Long offerId,
 	Integer matchScore,
 	String matchReason,

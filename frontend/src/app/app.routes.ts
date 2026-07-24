@@ -8,4 +8,10 @@ export const routes: Routes = [
     path: '',
     loadChildren: () => import('./offers/shell/offers-routes').then((m) => m.offersRoutes),
   },
+  // Profil-Verwaltung: Profile anlegen/bearbeiten/aktivieren und den Bestand
+  // gegen ein Profil neu bewerten. Sheriff scope `profiles`.
+  {
+    path: 'profil',
+    loadChildren: () => import('./profiles/shell/profiles-routes').then((m) => m.profilesRoutes),
+  },
 ];

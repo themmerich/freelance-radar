@@ -2,6 +2,7 @@ package de.prime_ux.backend.collect;
 
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -10,13 +11,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import de.prime_ux.backend.TestcontainersConfiguration;
 import de.prime_ux.backend.analyze.AnalysisResult;
 import de.prime_ux.backend.analyze.AnalyzedSkill;
-import de.prime_ux.backend.analyze.OfferAnalysis;
 import de.prime_ux.backend.analyze.OfferAnalyzer;
+import de.prime_ux.backend.analyze.OfferAssessment;
 import de.prime_ux.backend.offer.OfferRepository;
 import de.prime_ux.backend.run.RunRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,7 +28,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
 
 // Full slice against PostgreSQL (Testcontainers); the IMAP and Claude edges are
 // stubbed so neither a real mailbox nor ein API-Key needed. @Primary replaces
@@ -51,15 +55,15 @@ class CollectControllerTest {
 		@Bean
 		@Primary
 		OfferAnalyzer stubbedAnalyzer() {
-			return offers ->
+			return (profile, offers) ->
 				new AnalysisResult(
 					offers
 						.stream()
 						.map(offer ->
-							new OfferAnalysis(
+							new OfferAssessment(
 								offer.getId(),
 								85,
-								"Passt gut zum Profil.",
+								"Passt gut zum Profil (" + profile.getName() + ").",
 								"senior",
 								"unbekannt",
 								"Angular Entwickler",
@@ -76,6 +80,9 @@ class CollectControllerTest {
 
 	@Autowired
 	private MockMvc mockMvc;
+
+	@Autowired
+	private ObjectMapper objectMapper;
 
 	@Autowired
 	private OfferRepository offers;
@@ -152,7 +159,7 @@ class CollectControllerTest {
 			.andExpect(jsonPath("$[0].status").value("ANALYZED"))
 			.andExpect(jsonPath("$[0].country").value("AT"))
 			.andExpect(jsonPath("$[0].matchScore").value(85))
-			.andExpect(jsonPath("$[0].matchReason").value("Passt gut zum Profil."))
+			.andExpect(jsonPath("$[0].matchReason").value("Passt gut zum Profil (Standard)."))
 			.andExpect(jsonPath("$[0].skills", hasSize(2)))
 			.andExpect(jsonPath("$[0].skills[?(@.name=='Kotlin')].gap", contains(true)));
 
@@ -199,6 +206,62 @@ class CollectControllerTest {
 			.andExpect(jsonPath("$[1].agentName").value("Angular"))
 			.andExpect(jsonPath("$[1].primary").value(true))
 			.andExpect(jsonPath("$[1].dupCount").value(2));
+	}
+
+	@Test
+	void reanalyzingAgainstASecondProfileKeepsBothResults() throws Exception {
+		MAILS.add(
+			new FetchedMail(
+				"<offer-1@freelancermap.de>",
+				"office@freelancermap.de",
+				"Angular - Anzahl neue Projekte: 1",
+				Instant.parse("2026-07-23T06:35:00Z"),
+				agentMailBody(projectBlock("Senior Angular Entwickler (m/w/d)", 3026991L))
+			)
+		);
+		// Lauf 1 analysiert gegen das aktive Standard-Profil.
+		mockMvc.perform(post("/api/runs")).andExpect(status().isCreated());
+
+		String created = mockMvc
+			.perform(
+				post("/api/profiles")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(objectMapper.writeValueAsString(Map.of("name", "Fullstack", "role", "Fullstack Developer")))
+			)
+			.andExpect(status().isCreated())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		long fullstackId = objectMapper.readTree(created).get("id").asLong();
+
+		// Kostenvorschau: 1 unbewerteter Kandidat für das neue Profil.
+		mockMvc
+			.perform(get("/api/analyses/preview").param("profileId", String.valueOf(fullstackId)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.candidates").value(1))
+			.andExpect(jsonPath("$.estimatedInputTokens").value(1200));
+
+		mockMvc
+			.perform(
+				post("/api/analyses")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(objectMapper.writeValueAsString(Map.of("profileId", fullstackId)))
+			)
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.analyzedOffers").value(1));
+
+		// Beide Ergebnisse existieren nebeneinander — je nach angefragtem Profil.
+		mockMvc
+			.perform(get("/api/offers").param("profileId", String.valueOf(fullstackId)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[0].matchReason").value("Passt gut zum Profil (Fullstack)."));
+
+		mockMvc
+			.perform(get("/api/offers"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[0].matchReason").value("Passt gut zum Profil (Standard)."));
+
+		mockMvc.perform(delete("/api/profiles/{id}", fullstackId)).andExpect(status().isNoContent());
 	}
 
 	@Test
