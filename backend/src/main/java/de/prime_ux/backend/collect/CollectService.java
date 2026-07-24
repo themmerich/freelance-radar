@@ -1,23 +1,29 @@
 package de.prime_ux.backend.collect;
 
+import de.prime_ux.backend.analyze.AnalysisService;
 import de.prime_ux.backend.offer.Offer;
 import de.prime_ux.backend.offer.OfferRepository;
 import de.prime_ux.backend.run.Run;
 import de.prime_ux.backend.run.RunRepository;
 import java.time.LocalDate;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Ein Abruf-Lauf: Mails seit dem Startdatum holen, per Message-ID deduplizieren,
- * pro Projekt-Block ein Offer mit status=NEW speichern und den Lauf protokollieren.
- * Springen mehrere Agenten auf dasselbe Projekt an (gleiche freelancermap-ID),
- * wird nur der erste Eintrag primär — die Kopien zählen den dup_count hoch.
- * Verbraucht keine Tokens — die Claude-Analyse kommt erst in Phase 2.
+ * pro Projekt-Block ein Offer mit status=NEW speichern, dann die neuen primären
+ * Angebote per Claude analysieren (gedeckelt, siehe {@link AnalysisService}) und
+ * den Lauf inklusive Token-Verbrauch protokollieren. Springen mehrere Agenten
+ * auf dasselbe Projekt an (gleiche freelancermap-ID), wird nur der erste Eintrag
+ * primär — die Kopien zählen den dup_count hoch und werden nie analysiert.
  */
 @Service
 public class CollectService {
+
+	private static final Logger log = LoggerFactory.getLogger(CollectService.class);
 
 	private final MailSource mailSource;
 	private final ParserService parser;
@@ -25,6 +31,7 @@ public class CollectService {
 	private final OfferRepository offers;
 	private final RunRepository runs;
 	private final RadarProperties properties;
+	private final AnalysisService analysis;
 
 	public CollectService(
 		MailSource mailSource,
@@ -32,7 +39,8 @@ public class CollectService {
 		SinceDateStore sinceDate,
 		OfferRepository offers,
 		RunRepository runs,
-		RadarProperties properties
+		RadarProperties properties,
+		AnalysisService analysis
 	) {
 		this.mailSource = mailSource;
 		this.parser = parser;
@@ -40,6 +48,7 @@ public class CollectService {
 		this.offers = offers;
 		this.runs = runs;
 		this.properties = properties;
+		this.analysis = analysis;
 	}
 
 	@Transactional
@@ -55,7 +64,16 @@ public class CollectService {
 			newCount += saveOffers(mail);
 		}
 
-		return runs.save(new Run(newCount, mails.size(), "since=" + since));
+		Run run = runs.save(new Run(newCount, mails.size(), "since=" + since));
+		try {
+			analysis.analyzeNewOffers(run);
+		} catch (Exception e) {
+			// Der Abruf-Teil des Laufs bleibt gültig; die Angebote bleiben NEW
+			// und werden beim nächsten Lauf erneut angeboten.
+			log.warn("Claude-Analyse fehlgeschlagen", e);
+			run.setNote(run.getNote() + "; analyse-fehler: " + e.getMessage());
+		}
+		return run;
 	}
 
 	private int saveOffers(FetchedMail mail) {

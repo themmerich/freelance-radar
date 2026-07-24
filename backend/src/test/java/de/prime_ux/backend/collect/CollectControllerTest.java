@@ -1,5 +1,6 @@
 package de.prime_ux.backend.collect;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -7,6 +8,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import de.prime_ux.backend.TestcontainersConfiguration;
+import de.prime_ux.backend.analyze.AnalysisResult;
+import de.prime_ux.backend.analyze.AnalyzedSkill;
+import de.prime_ux.backend.analyze.OfferAnalysis;
+import de.prime_ux.backend.analyze.OfferAnalyzer;
 import de.prime_ux.backend.offer.OfferRepository;
 import de.prime_ux.backend.run.RunRepository;
 import java.time.Instant;
@@ -23,22 +28,49 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.web.servlet.MockMvc;
 
-// Full slice against PostgreSQL (Testcontainers); only the IMAP edge is stubbed
-// so no real mailbox is needed. The stub replaces ImapService via @Primary.
-@SpringBootTest(properties = "radar.state-dir=build/test-state")
+// Full slice against PostgreSQL (Testcontainers); the IMAP and Claude edges are
+// stubbed so neither a real mailbox nor ein API-Key needed. @Primary replaces
+// ImapService/ClaudeOfferAnalyzer.
+@SpringBootTest(properties = { "radar.state-dir=build/test-state", "spring.ai.anthropic.api-key=test-key" })
 @AutoConfigureMockMvc
-@Import({ TestcontainersConfiguration.class, CollectControllerTest.StubMailSource.class })
+@Import({ TestcontainersConfiguration.class, CollectControllerTest.StubEdges.class })
 class CollectControllerTest {
 
 	private static final List<FetchedMail> MAILS = new ArrayList<>();
 
 	@TestConfiguration(proxyBeanMethods = false)
-	static class StubMailSource {
+	static class StubEdges {
 
 		@Bean
 		@Primary
 		MailSource stubbedMailSource() {
 			return since -> List.copyOf(MAILS);
+		}
+
+		/** Bewertet jedes Angebot deterministisch: Score 85, ein Skill + ein Gap. */
+		@Bean
+		@Primary
+		OfferAnalyzer stubbedAnalyzer() {
+			return offers ->
+				new AnalysisResult(
+					offers
+						.stream()
+						.map(offer ->
+							new OfferAnalysis(
+								offer.getId(),
+								85,
+								"Passt gut zum Profil.",
+								"senior",
+								"unbekannt",
+								"Angular Entwickler",
+								"AT",
+								List.of(new AnalyzedSkill("Angular", false), new AnalyzedSkill("Kotlin", true))
+							)
+						)
+						.toList(),
+					1200,
+					300
+				);
 		}
 	}
 
@@ -105,7 +137,10 @@ class CollectControllerTest {
 			.perform(post("/api/runs"))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.newOffers").value(2))
-			.andExpect(jsonPath("$.totalSeen").value(1));
+			.andExpect(jsonPath("$.totalSeen").value(1))
+			.andExpect(jsonPath("$.analyzedOffers").value(2))
+			.andExpect(jsonPath("$.inputTokens").value(1200))
+			.andExpect(jsonPath("$.outputTokens").value(300));
 
 		mockMvc
 			.perform(get("/api/offers"))
@@ -114,7 +149,12 @@ class CollectControllerTest {
 			.andExpect(jsonPath("$[0].sourceType").value("AGENT"))
 			.andExpect(jsonPath("$[0].agentName").value("Angular"))
 			.andExpect(jsonPath("$[0].company").value("softwareXperts GmbH"))
-			.andExpect(jsonPath("$[0].status").value("NEW"));
+			.andExpect(jsonPath("$[0].status").value("ANALYZED"))
+			.andExpect(jsonPath("$[0].country").value("AT"))
+			.andExpect(jsonPath("$[0].matchScore").value(85))
+			.andExpect(jsonPath("$[0].matchReason").value("Passt gut zum Profil."))
+			.andExpect(jsonPath("$[0].skills", hasSize(2)))
+			.andExpect(jsonPath("$[0].skills[?(@.name=='Kotlin')].gap", contains(true)));
 
 		// Second run with the same mail: Message-ID dedup keeps the offer count at 2.
 		mockMvc

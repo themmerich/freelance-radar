@@ -1,0 +1,50 @@
+{
+  "name": "Thomas Hemmerich",
+  "role": "Frontend Architect / Angular Lead / Coach",
+  "seniority": "architect",
+  "freelance_since": 2009,
+  "region": "DACH, remote",
+  "languages": ["Deutsch (native)", "Englisch (fließend)"],
+  "focus": [
+    "Agentic UI / AI Engineering",
+    "Design Systems & Frontend-Architektur",
+    "Angular Modernization",
+    "Lead & Coaching"
+  ],
+  "industries": ["Banking", "Insurance", "Public Sector", "Industry"],
+  "skills": {
+    "ai_agentic": [
+      "Agentic UI Patterns", "A2UI", "AI-Driven Development", "LLM-Integration",
+      "Spring AI", "Claude Code", "Agent Skills & Guard Rails", "Agent Evals",
+      "MCP (Model Context Protocol)", "Design Systems mit AI", "Prompt Engineering"
+    ],
+    "frontend": [
+      "Angular (2-22)", "TypeScript", "Signals", "SignalStore", "NgRx", "RxJS",
+      "Nx", "Micro-Frontends", "Tailwind CSS", "PrimeNG", "Angular Material",
+      "Barrierefreiheit (A11y)", "OpenAPI", "zoneless", "Sheriff", "Web Components"
+    ],
+    "backend": [
+      "Java", "Spring Boot", "JPA", "Hibernate", "QueryDSL", "REST", "OAuth2",
+      "Kafka", "RabbitMQ", "PostgreSQL", "Oracle", "Flyway", "Liquibase",
+      "Spring Batch", "Keycloak", "JavaEE"
+    ],
+    "devops_testing": [
+      "Docker", "Kubernetes", "Jenkins", "GitHub Actions", "Playwright",
+      "Cypress", "Jest", "JUnit", "Cucumber", "SonarQube", "AWS", "Terraform"
+    ],
+    "methods": [
+      "Domain-Driven Design", "Clean Code", "TDD", "BDD", "Microservices",
+      "Scrum", "Agile", "Teamführung", "Coaching"
+    ]
+  },
+  "strong_match_signals": [
+    "Angular", "Frontend Architect", "Lead", "Design System", "Micro-Frontend",
+    "Nx", "Signals", "Spring Boot", "Java", "Agentic", "AI", "LLM", "MCP",
+    "Coaching", "Modernisierung", "Enterprise", "remote"
+  ],
+  "weak_or_nomatch_signals": [
+    "React", "Vue", "PHP", "Python (als Hauptsprache)", ".NET", "C#",
+    "Mobile (iOS/Android nativ)", "Data Engineering", "Pflicht Vor-Ort 5 Tage",
+    "Junior", "Pure Backend ohne Frontend"
+  ]
+}
