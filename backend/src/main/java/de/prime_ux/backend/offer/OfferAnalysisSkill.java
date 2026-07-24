@@ -7,25 +7,25 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-/** Ein nachgefragter Skill eines Angebots; {@code gap} markiert Lücken im Profil (Phase 2). */
+/** Gefordertes Skill aus einer Analyse; {@code gap} ist profilabhängig. */
 @Entity
-@Table(name = "offer_skills")
+@Table(name = "offer_analysis_skills")
 @Getter
 @Setter
-public class OfferSkill {
+public class OfferAnalysisSkill {
 
 	@EmbeddedId
-	private OfferSkillId id;
+	private OfferAnalysisSkillId id;
 
 	@Column(name = "is_gap", nullable = false)
 	private boolean gap;
 
-	protected OfferSkill() {
+	protected OfferAnalysisSkill() {
 		// Required by JPA.
 	}
 
-	public OfferSkill(Long offerId, String skill, boolean gap) {
-		this.id = new OfferSkillId(offerId, skill);
+	public OfferAnalysisSkill(Long offerId, Long profileId, String skill, boolean gap) {
+		this.id = new OfferAnalysisSkillId(offerId, profileId, skill);
 		this.gap = gap;
 	}
 }

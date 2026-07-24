@@ -55,8 +55,15 @@ const RUN = {
 
 // The backend is mocked at the network edge so the e2e suite needs no Spring
 // Boot instance: before a run the API is empty, afterwards it returns one offer.
+const PROFILES = [
+  { id: 1, name: 'Standard', active: true },
+  { id: 2, name: 'Fullstack', active: false },
+];
+
 async function mockApi(page: Page): Promise<{ collected: () => boolean }> {
   let collected = false;
+  await page.route('**/api/profiles', (route) => route.fulfill({ json: PROFILES }));
+  await page.route('**/api/profiles/*/activate', (route) => route.fulfill({ json: { id: 2, name: 'Fullstack', active: true } }));
   await page.route('**/api/offers', (route) => route.fulfill({ json: collected ? [OFFER, DUPLICATE_OFFER] : [] }));
   await page.route('**/api/runs/latest', (route) => (collected ? route.fulfill({ json: RUN }) : route.fulfill({ status: 204 })));
   await page.route('**/api/runs', (route) => {
@@ -74,7 +81,7 @@ test.describe('Offers dashboard e2e', () => {
 
   // Self-test: the route loaded and the dashboard rendered its card.
   test('renders the dashboard (self-test)', async ({ page }) => {
-    await expect(page.getByText('Freelance Radar')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Fetch & analyze mails' })).toBeVisible();
   });
 
@@ -139,6 +146,14 @@ test.describe('Offers dashboard e2e', () => {
     await expect(page.getByRole('cell', { name: /Senior Angular Entwickler/ })).toHaveCount(1);
     await expect(page.getByText('spread 2×')).toBeVisible();
     await expect(page.getByRole('cell', { name: 'Java Spring' })).toHaveCount(0);
+  });
+
+  test('switching the profile activates it and reloads the offers', async ({ page }) => {
+    const activated = page.waitForRequest((request) => request.url().includes('/api/profiles/2/activate') && request.method() === 'POST');
+
+    await page.getByLabel('Profile').selectOption('2');
+
+    await activated;
   });
 
   test('shows an error message when the run fails', async ({ page }) => {

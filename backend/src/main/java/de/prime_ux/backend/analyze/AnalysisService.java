@@ -1,11 +1,19 @@
 package de.prime_ux.backend.analyze;
 
 import de.prime_ux.backend.offer.Offer;
+import de.prime_ux.backend.offer.OfferAnalysis;
+import de.prime_ux.backend.offer.OfferAnalysisRepository;
+import de.prime_ux.backend.offer.OfferAnalysisSkill;
+import de.prime_ux.backend.offer.OfferAnalysisSkillRepository;
 import de.prime_ux.backend.offer.OfferRepository;
-import de.prime_ux.backend.offer.OfferSkill;
-import de.prime_ux.backend.offer.OfferSkillRepository;
-import de.prime_ux.backend.offer.OfferStatus;
+import de.prime_ux.backend.profile.Profile;
+import de.prime_ux.backend.profile.ProfileNotFoundException;
+import de.prime_ux.backend.profile.ProfileRepository;
 import de.prime_ux.backend.run.Run;
+import de.prime_ux.backend.run.RunRepository;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -16,48 +24,90 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Analysiert nach einem Abruf-Lauf die neuen Angebote: nur status=NEW und nur
- * primäre Einträge (Kopien anderer Agenten kosten keine Tokens), gedeckelt auf
- * radar.analysis.max-offers-per-run. Ergebnis und Token-Verbrauch landen am Run.
+ * Analysiert Angebote gegen ein Profil: nur primäre Einträge ohne Ergebnis für
+ * genau dieses Profil (Kopien anderer Agenten kosten nie Tokens), gedeckelt auf
+ * radar.analysis.max-offers-per-run. Ergebnis und Token-Verbrauch landen am Run;
+ * Ergebnisse anderer Profile bleiben unberührt nebeneinander bestehen.
  */
 @Service
 public class AnalysisService {
 
 	private final OfferAnalyzer analyzer;
 	private final OfferRepository offers;
-	private final OfferSkillRepository skills;
+	private final OfferAnalysisRepository analyses;
+	private final OfferAnalysisSkillRepository skills;
+	private final ProfileRepository profiles;
+	private final RunRepository runs;
 	private final AnalysisProperties properties;
 
 	public AnalysisService(
 		OfferAnalyzer analyzer,
 		OfferRepository offers,
-		OfferSkillRepository skills,
+		OfferAnalysisRepository analyses,
+		OfferAnalysisSkillRepository skills,
+		ProfileRepository profiles,
+		RunRepository runs,
 		AnalysisProperties properties
 	) {
 		this.analyzer = analyzer;
 		this.offers = offers;
+		this.analyses = analyses;
 		this.skills = skills;
+		this.profiles = profiles;
+		this.runs = runs;
 		this.properties = properties;
 	}
 
+	/** Nach einem Abruf-Lauf: neue Angebote gegen das aktive Profil bewerten. */
 	@Transactional
 	public void analyzeNewOffers(Run run) {
-		List<Offer> candidates = offers.findByStatusAndPrimaryTrueOrderByReceivedAtAsc(OfferStatus.NEW);
+		Profile active = profiles.findByActiveTrue().orElse(null);
+		if (active == null) {
+			run.setNote(run.getNote() + "; kein aktives profil");
+			return;
+		}
+		analyze(active, Instant.EPOCH, run);
+	}
+
+	/** Re-Analyse „Bestand gegen Profil X bewerten", optional auf ein Zeitfenster begrenzt. */
+	@Transactional
+	public Run reanalyze(Long profileId, Integer days) {
+		Profile profile = profiles.findById(profileId).orElseThrow(() -> new ProfileNotFoundException(profileId));
+		Run run = runs.save(new Run(0, 0, "reanalyse profil=" + profile.getName() + (days == null ? "" : ", tage=" + days)));
+		analyze(profile, since(days), run);
+		return run;
+	}
+
+	/** Anzahl noch unbewerteter primärer Angebote für Profil + Zeitfenster (Kostenvorschau). */
+	public int countCandidates(Long profileId, Integer days) {
+		profiles.findById(profileId).orElseThrow(() -> new ProfileNotFoundException(profileId));
+		return offers.findUnanalyzedPrimarySince(profileId, since(days)).size();
+	}
+
+	private Instant since(Integer days) {
+		if (days == null) {
+			return Instant.EPOCH;
+		}
+		return LocalDate.now().minusDays(days - 1L).atStartOfDay(ZoneId.systemDefault()).toInstant();
+	}
+
+	private void analyze(Profile profile, Instant since, Run run) {
+		List<Offer> candidates = offers.findUnanalyzedPrimarySince(profile.getId(), since);
 		if (candidates.isEmpty()) {
 			return;
 		}
 
 		List<Offer> batch = candidates.subList(0, Math.min(candidates.size(), properties.maxOffersPerRun()));
-		AnalysisResult result = analyzer.analyze(batch);
+		AnalysisResult result = analyzer.analyze(profile, batch);
 		Map<Long, Offer> byId = batch.stream().collect(Collectors.toMap(Offer::getId, Function.identity()));
 
 		int analyzed = 0;
-		for (OfferAnalysis analysis : result.analyses()) {
-			Offer offer = byId.get(analysis.offerId());
+		for (OfferAssessment assessment : result.assessments()) {
+			Offer offer = byId.get(assessment.offerId());
 			if (offer == null) {
 				continue;
 			}
-			apply(offer, analysis);
+			apply(offer, profile, assessment);
 			analyzed++;
 		}
 
@@ -71,21 +121,21 @@ public class AnalysisService {
 		}
 	}
 
-	private void apply(Offer offer, OfferAnalysis analysis) {
-		offer.setMatchScore(analysis.matchScore());
-		offer.setMatchReason(analysis.matchReason());
-		offer.setSeniority(analysis.seniority());
-		offer.setIndustry(analysis.industry());
-		offer.setRole(analysis.role());
-		offer.setCountry(analysis.country());
-		offer.setStatus(OfferStatus.ANALYZED);
+	private void apply(Offer offer, Profile profile, OfferAssessment assessment) {
+		// Angebots-Eigenschaften (unabhängig vom Profil) — jüngste Analyse gewinnt.
+		offer.setSeniority(assessment.seniority());
+		offer.setIndustry(assessment.industry());
+		offer.setRole(assessment.role());
+		offer.setCountry(assessment.country());
 
-		skills.deleteByIdOfferId(offer.getId());
-		// Das LLM liefert gelegentlich Duplikate — der PK (offer_id, skill) verlangt Eindeutigkeit.
+		analyses.save(new OfferAnalysis(offer.getId(), profile.getId(), assessment.matchScore(), assessment.matchReason()));
+
+		skills.deleteByIdOfferIdAndIdProfileId(offer.getId(), profile.getId());
+		// Das LLM liefert gelegentlich Duplikate — der PK verlangt Eindeutigkeit.
 		Map<String, AnalyzedSkill> unique = new LinkedHashMap<>();
-		for (AnalyzedSkill skill : analysis.skills() == null ? List.<AnalyzedSkill>of() : analysis.skills()) {
+		for (AnalyzedSkill skill : assessment.skills() == null ? List.<AnalyzedSkill>of() : assessment.skills()) {
 			unique.putIfAbsent(skill.name().toLowerCase(Locale.ROOT), skill);
 		}
-		unique.values().forEach(skill -> skills.save(new OfferSkill(offer.getId(), skill.name(), skill.gap())));
+		unique.values().forEach(skill -> skills.save(new OfferAnalysisSkill(offer.getId(), profile.getId(), skill.name(), skill.gap())));
 	}
 }

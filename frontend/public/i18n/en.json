@@ -1,6 +1,51 @@
 {
+  "nav": {
+    "label": "Main navigation",
+    "dashboard": "Dashboard",
+    "profiles": "Profiles"
+  },
+  "profiles": {
+    "title": "Profiles",
+    "list": {
+      "active": "Active",
+      "activate": "Activate",
+      "delete": "Delete profile {{name}}",
+      "new": "New profile"
+    },
+    "categories": {
+      "ai_agentic": "AI & Agentic",
+      "frontend": "Frontend",
+      "backend": "Backend",
+      "devops_testing": "DevOps & testing",
+      "methods": "Methods"
+    },
+    "editor": {
+      "name": "Name",
+      "role": "Role",
+      "focus": "Focus",
+      "industries": "Industries",
+      "region": "Region",
+      "languages": "Languages",
+      "strongSignals": "Strong signals",
+      "weakSignals": "Weak / no-match signals",
+      "addPlaceholder": "Add + Enter",
+      "removeItem": "Remove {{item}}",
+      "save": "Save",
+      "saveError": "Saving failed."
+    },
+    "reanalysis": {
+      "title": "Score the backlog against this profile",
+      "range": "Range",
+      "all": "Entire backlog",
+      "days": "Last {{days}} days",
+      "preview": "{{candidates}} offers open",
+      "run": "Score",
+      "done": "{{analyzed}} scored"
+    }
+  },
   "offers": {
     "title": "Freelance Radar",
+    "profile": "Profile",
     "collect": "Fetch & analyze mails",
     "lastRun": "Last run: {{newOffers}} new of {{totalSeen}} seen",
     "lastRunAnalyzed": "{{analyzed}} analyzed",

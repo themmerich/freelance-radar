@@ -1,6 +1,51 @@
 {
+  "nav": {
+    "label": "Hauptnavigation",
+    "dashboard": "Dashboard",
+    "profiles": "Profile"
+  },
+  "profiles": {
+    "title": "Profile",
+    "list": {
+      "active": "Aktiv",
+      "activate": "Aktivieren",
+      "delete": "Profil {{name}} löschen",
+      "new": "Neues Profil"
+    },
+    "categories": {
+      "ai_agentic": "KI & Agentic",
+      "frontend": "Frontend",
+      "backend": "Backend",
+      "devops_testing": "DevOps & Testing",
+      "methods": "Methoden"
+    },
+    "editor": {
+      "name": "Name",
+      "role": "Rolle",
+      "focus": "Fokus",
+      "industries": "Branchen",
+      "region": "Region",
+      "languages": "Sprachen",
+      "strongSignals": "Starke Signale",
+      "weakSignals": "Schwache / No-Match-Signale",
+      "addPlaceholder": "Hinzufügen + Enter",
+      "removeItem": "{{item}} entfernen",
+      "save": "Speichern",
+      "saveError": "Speichern fehlgeschlagen."
+    },
+    "reanalysis": {
+      "title": "Bestand gegen dieses Profil bewerten",
+      "range": "Zeitraum",
+      "all": "Gesamter Bestand",
+      "days": "Letzte {{days}} Tage",
+      "preview": "{{candidates}} Angebote offen",
+      "run": "Bewerten",
+      "done": "{{analyzed}} bewertet"
+    }
+  },
   "offers": {
     "title": "Freelance Radar",
+    "profile": "Profil",
     "collect": "Mails abrufen & analysieren",
     "lastRun": "Letzter Lauf: {{newOffers}} neu von {{totalSeen}} gesehen",
     "lastRunAnalyzed": "{{analyzed}} analysiert",

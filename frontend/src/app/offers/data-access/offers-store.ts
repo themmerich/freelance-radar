@@ -6,6 +6,14 @@ import { Offer, Run } from '../domain/offer';
 
 const OFFERS_URL = '/api/offers';
 const RUNS_URL = '/api/runs';
+const PROFILES_URL = '/api/profiles';
+
+/** Minimalsicht auf die Profile für den Dashboard-Umschalter. */
+export type ProfileOption = {
+  id: number;
+  name: string;
+  active: boolean;
+};
 
 /**
  * Reads offers and the latest run reactively via `httpResource()`; the collect
@@ -19,16 +27,29 @@ export class OffersStore {
 
   private readonly offersResource = httpResource<Offer[]>(() => OFFERS_URL, { defaultValue: [] });
   private readonly latestRunResource = httpResource<Run | null>(() => `${RUNS_URL}/latest`, { defaultValue: null });
+  private readonly profilesResource = httpResource<ProfileOption[]>(() => PROFILES_URL, { defaultValue: [] });
 
   readonly offers = this.offersResource.value;
   readonly isLoading = this.offersResource.isLoading;
   readonly hasError = this.offersResource.error;
   readonly latestRun = this.latestRunResource.value;
+  readonly profileOptions = this.profilesResource.value;
 
   private readonly collecting = signal(false);
   private readonly collectFailed = signal(false);
   readonly isCollecting = this.collecting.asReadonly();
   readonly hasCollectError = this.collectFailed.asReadonly();
+
+  /** Umschalten auf ein anderes Profil: aktivieren, dann Angebote aus dessen Sicht laden. */
+  switchProfile(profileId: number): void {
+    this.http
+      .post<ProfileOption>(`${PROFILES_URL}/${profileId}/activate`, {})
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.profilesResource.reload();
+        this.offersResource.reload();
+      });
+  }
 
   /** Löst einen Abruf-Lauf aus („Mails abrufen"-Button) und lädt danach neu. */
   collect(): void {

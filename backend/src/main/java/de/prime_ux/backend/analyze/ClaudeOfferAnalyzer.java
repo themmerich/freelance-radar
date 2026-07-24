@@ -1,23 +1,20 @@
 package de.prime_ux.backend.analyze;
 
 import de.prime_ux.backend.offer.Offer;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
+import de.prime_ux.backend.profile.Profile;
 import java.util.List;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.ResponseEntity;
 import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
 /**
  * Bewertet Angebote per Claude (Modell und max-tokens in application.properties,
  * API-Key nur in der git-ignorierten application-local.properties). Ein einziger
- * Batch-Request pro Lauf; profile.json steht kompakt im System-Prompt
- * (Prompt-Caching-freundlich, weil über alle Läufe identisch).
+ * Batch-Request pro Lauf; das Profil steht als kompaktes JSON im System-Prompt —
+ * pro Profil byte-identisch über alle Läufe (Prompt-Caching-freundlich).
  */
 @Service
 public class ClaudeOfferAnalyzer implements OfferAnalyzer {
@@ -29,10 +26,10 @@ public class ClaudeOfferAnalyzer implements OfferAnalyzer {
 		weak_or_nomatch_signals.
 
 		Für jedes Angebot:
-		- matchScore: Ganzzahl 0-100. Hoch (80-100) für Angular-Lead/Architekt-Rollen im \
-		Enterprise-Umfeld, remote, mit Kern-Skills des Profils. Niedrig (0-30) für \
-		React/Vue/andere Stacks, reine Junior-Rollen, Pflicht-Vor-Ort-Vollzeit, reines \
-		Non-Frontend.
+		- matchScore: Ganzzahl 0-100. Hoch (80-100) für Rollen, die Profil-Rolle und \
+		Kern-Skills treffen, remote-freundlich im Enterprise-Umfeld. Niedrig (0-30) für \
+		andere Stacks, reine Junior-Rollen, Pflicht-Vor-Ort-Vollzeit oder Rollen, die \
+		den weak_or_nomatch_signals entsprechen.
 		- matchReason: 1-2 knappe Sätze auf Deutsch, warum der Score so ausfällt.
 		- seniority: junior | mid | senior | lead | architect (falls erkennbar, sonst null).
 		- industry: Branche (Banking, Insurance, Public, Automotive, ...), sonst "unbekannt".
@@ -50,7 +47,7 @@ public class ClaudeOfferAnalyzer implements OfferAnalyzer {
 		%s""";
 
 	/** Antwort-Schema für den JSON-Output des Modells. */
-	record AnalysisResponse(List<OfferAnalysis> analyses) {}
+	record AnalysisResponse(List<OfferAssessment> analyses) {}
 
 	/** Kompakte Angebots-Repräsentation im User-Prompt. */
 	record PromptOffer(
@@ -67,30 +64,57 @@ public class ClaudeOfferAnalyzer implements OfferAnalyzer {
 		String text
 	) {}
 
+	/** Profil-Repräsentation im System-Prompt (Feldnamen wie im v1-profile.json). */
+	record PromptProfile(
+		String name,
+		String role,
+		String focus,
+		String industries,
+		String region,
+		String languages,
+		Object skills,
+		Object strong_match_signals,
+		Object weak_or_nomatch_signals
+	) {}
+
 	private final ChatClient chatClient;
 	private final AnalysisProperties properties;
 	private final ObjectMapper objectMapper;
-	private final String systemPrompt;
 
 	public ClaudeOfferAnalyzer(ChatClient.Builder chatClientBuilder, AnalysisProperties properties, ObjectMapper objectMapper) {
 		this.chatClient = chatClientBuilder.build();
 		this.properties = properties;
 		this.objectMapper = objectMapper;
-		this.systemPrompt = SYSTEM_PROMPT.formatted(loadProfile());
 	}
 
 	@Override
-	public AnalysisResult analyze(List<Offer> offers) {
+	public AnalysisResult analyze(Profile profile, List<Offer> offers) {
 		ResponseEntity<ChatResponse, AnalysisResponse> response = chatClient
 			.prompt()
-			.system(systemPrompt)
+			.system(SYSTEM_PROMPT.formatted(profileJson(profile)))
 			.user("Bewerte die folgenden Angebote:\n" + objectMapper.writeValueAsString(toPromptOffers(offers)))
 			.call()
 			.responseEntity(AnalysisResponse.class);
 
 		Usage usage = response.response().getMetadata().getUsage();
-		List<OfferAnalysis> analyses = response.entity() == null ? List.of() : response.entity().analyses();
-		return new AnalysisResult(analyses, usage.getPromptTokens(), usage.getCompletionTokens());
+		List<OfferAssessment> assessments = response.entity() == null ? List.of() : response.entity().analyses();
+		return new AnalysisResult(assessments, usage.getPromptTokens(), usage.getCompletionTokens());
+	}
+
+	private String profileJson(Profile profile) {
+		return objectMapper.writeValueAsString(
+			new PromptProfile(
+				profile.getName(),
+				profile.getRole(),
+				profile.getFocus(),
+				profile.getIndustries(),
+				profile.getRegion(),
+				profile.getLanguages(),
+				objectMapper.readTree(profile.getSkillsJson()),
+				objectMapper.readTree(profile.getStrongSignalsJson()),
+				objectMapper.readTree(profile.getWeakSignalsJson())
+			)
+		);
 	}
 
 	private List<PromptOffer> toPromptOffers(List<Offer> offers) {
@@ -120,13 +144,5 @@ public class ClaudeOfferAnalyzer implements OfferAnalyzer {
 		}
 		int max = properties.promptBodyChars();
 		return body.length() <= max ? body : body.substring(0, max);
-	}
-
-	private String loadProfile() {
-		try {
-			return new ClassPathResource("profile.json").getContentAsString(StandardCharsets.UTF_8);
-		} catch (IOException e) {
-			throw new UncheckedIOException("profile.json nicht lesbar", e);
-		}
 	}
 }
