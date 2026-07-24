@@ -22,6 +22,26 @@
       "remote": "Remote",
       "status": "Status"
     },
+    "kpi": {
+      "today": "Today",
+      "last7Days": "7 days",
+      "last30Days": "30 days",
+      "averageScore": "Avg match score",
+      "greenShare": "Share 🟢"
+    },
+    "charts": {
+      "perDay": "Offers per day (30 days)",
+      "sources": "Agent vs. private",
+      "agents": "Triggers per agent",
+      "topSkills": "Top requested skills",
+      "topGaps": "Top skill gaps",
+      "scores": "Match score distribution"
+    },
+    "settings": {
+      "greenFrom": "from",
+      "yellowFrom": "from",
+      "collapseDuplicates": "Collapse duplicates"
+    },
     "detail": {
       "notAnalyzed": "Not analyzed yet.",
       "skills": "Skills (red = missing from profile)",

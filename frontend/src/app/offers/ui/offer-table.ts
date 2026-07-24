@@ -36,10 +36,6 @@ const SOURCE_SEVERITY = {
   OTHER: 'secondary',
 } as const;
 
-/** Ampel-Schwellen wie in v1: 🟢 ≥ 70, 🟡 ≥ 40, sonst 🔴 (einstellbar ab Phase 3). */
-const GREEN_THRESHOLD = 70;
-const YELLOW_THRESHOLD = 40;
-
 @Component({
   selector: 'app-offer-table',
   imports: [DatePipe, TranslocoDirective, ButtonModule, TableModule, TagModule],
@@ -162,16 +158,19 @@ const YELLOW_THRESHOLD = 40;
 })
 export class OfferTable {
   readonly offers = input.required<OfferRow[]>();
+  /** Ampel-Schwellen (v1-Defaults 🟢 ≥ 70, 🟡 ≥ 40), im Dashboard einstellbar. */
+  readonly greenThreshold = input(70);
+  readonly yellowThreshold = input(40);
 
   protected severity(sourceType: OfferRow['sourceType']): 'info' | 'success' | 'secondary' {
     return SOURCE_SEVERITY[sourceType];
   }
 
   protected scoreSeverity(score: number): 'success' | 'warn' | 'danger' {
-    if (score >= GREEN_THRESHOLD) {
+    if (score >= this.greenThreshold()) {
       return 'success';
     }
-    return score >= YELLOW_THRESHOLD ? 'warn' : 'danger';
+    return score >= this.yellowThreshold() ? 'warn' : 'danger';
   }
 
   /** DE neutral, AT/CH als DACH-Nachbarn hervorgehoben, alles andere deutlich markiert. */

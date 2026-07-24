@@ -6,12 +6,18 @@ import { CardModule } from 'primeng/card';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { OffersStore } from '../data-access/offers-store';
+import { SettingsStore } from '../data-access/settings-store';
 import { runCostCents } from '../util/run-cost';
+import { countBySource, kpis, offersPerDay, scoreHistogram, topSkills, triggersPerAgent } from '../util/offer-stats';
+import { KpiTiles } from '../ui/kpi-tiles';
+import { OfferCharts } from '../ui/offer-charts';
 import { OfferTable, OfferRow } from '../ui/offer-table';
+
+const TOP_SKILL_LIMIT = 10;
 
 @Component({
   selector: 'app-offers-page',
-  imports: [DatePipe, DecimalPipe, TranslocoDirective, ButtonModule, CardModule, ProgressSpinnerModule, OfferTable],
+  imports: [DatePipe, DecimalPipe, TranslocoDirective, ButtonModule, CardModule, ProgressSpinnerModule, KpiTiles, OfferCharts, OfferTable],
   template: `
     <main class="mx-auto flex min-h-dvh max-w-7xl flex-col gap-6 p-6">
       <ng-container *transloco="let t">
@@ -48,7 +54,53 @@ import { OfferTable, OfferRow } from '../ui/offer-table';
             } @else if (store.hasError()) {
               <p class="text-red-500">{{ t('offers.loadError') }}</p>
             } @else {
-              <app-offer-table [offers]="rows()" />
+              <app-kpi-tiles [kpis]="pageKpis()" />
+
+              <app-offer-charts
+                [perDay]="perDay()"
+                [sources]="sources()"
+                [agents]="agents()"
+                [skills]="skills()"
+                [gaps]="gaps()"
+                [histogram]="histogram()"
+                [greenThreshold]="settings.greenThreshold()"
+                [yellowThreshold]="settings.yellowThreshold()"
+              />
+
+              <div class="flex flex-wrap items-center gap-6 text-sm">
+                <label class="flex items-center gap-2">
+                  <span>🟢 {{ t('offers.settings.greenFrom') }}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    class="w-20 rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
+                    [value]="settings.greenThreshold()"
+                    (change)="onGreenChange($event)"
+                  />
+                </label>
+                <label class="flex items-center gap-2">
+                  <span>🟡 {{ t('offers.settings.yellowFrom') }}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    class="w-20 rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
+                    [value]="settings.yellowThreshold()"
+                    (change)="onYellowChange($event)"
+                  />
+                </label>
+                <label class="flex items-center gap-2">
+                  <input type="checkbox" [checked]="settings.collapseDuplicates()" (change)="onCollapseChange($event)" />
+                  <span>{{ t('offers.settings.collapseDuplicates') }}</span>
+                </label>
+              </div>
+
+              <app-offer-table
+                [offers]="rows()"
+                [greenThreshold]="settings.greenThreshold()"
+                [yellowThreshold]="settings.yellowThreshold()"
+              />
             }
           </div>
         </p-card>
@@ -58,33 +110,54 @@ import { OfferTable, OfferRow } from '../ui/offer-table';
 })
 export class OffersPage {
   protected readonly store = inject(OffersStore);
+  protected readonly settings = inject(SettingsStore);
   protected readonly costCents = runCostCents;
 
-  // Springen mehrere Agenten auf dasselbe Projekt an, erscheint nur der primäre
-  // Eintrag — mit dupCount-Badge statt Doppelzeile (Toggle kommt in Phase 3).
-  protected readonly rows = computed<OfferRow[]>(() =>
-    this.store
-      .offers()
-      .filter((offer) => offer.primary)
-      .map((offer) => ({
-        id: offer.id,
-        receivedAt: offer.receivedAt,
-        sourceType: offer.sourceType,
-        agentName: offer.agentName,
-        title: offer.projectTitle ?? offer.subject,
-        company: offer.company,
-        location: offer.location,
-        country: offer.country,
-        remote: offer.remote,
-        dupCount: offer.dupCount,
-        projectUrl: offer.projectUrl,
-        matchScore: offer.matchScore,
-        matchReason: offer.matchReason,
-        rate: offer.rate,
-        startDate: offer.startDate,
-        duration: offer.duration,
-        skills: offer.skills,
-        status: offer.status,
-      })),
-  );
+  /** Kopien anderer Agenten: Auswertungen zählen immer nur primäre Einträge (wie v1). */
+  private readonly primaryOffers = computed(() => this.store.offers().filter((offer) => offer.primary));
+
+  protected readonly pageKpis = computed(() => kpis(this.primaryOffers(), this.settings.settings().greenThreshold, new Date()));
+  protected readonly perDay = computed(() => offersPerDay(this.primaryOffers(), 30, new Date()));
+  protected readonly sources = computed(() => countBySource(this.primaryOffers()));
+  protected readonly agents = computed(() => triggersPerAgent(this.primaryOffers()));
+  protected readonly skills = computed(() => topSkills(this.primaryOffers(), TOP_SKILL_LIMIT, false));
+  protected readonly gaps = computed(() => topSkills(this.primaryOffers(), TOP_SKILL_LIMIT, true));
+  protected readonly histogram = computed(() => scoreHistogram(this.primaryOffers()));
+
+  // Duplikat-Toggle: zusammengefasst (nur primäre, mit Badge) oder alle Zeilen.
+  protected readonly rows = computed<OfferRow[]>(() => {
+    const offers = this.settings.settings().collapseDuplicates ? this.primaryOffers() : this.store.offers();
+    return offers.map((offer) => ({
+      id: offer.id,
+      receivedAt: offer.receivedAt,
+      sourceType: offer.sourceType,
+      agentName: offer.agentName,
+      title: offer.projectTitle ?? offer.subject,
+      company: offer.company,
+      location: offer.location,
+      country: offer.country,
+      remote: offer.remote,
+      dupCount: offer.dupCount,
+      projectUrl: offer.projectUrl,
+      matchScore: offer.matchScore,
+      matchReason: offer.matchReason,
+      rate: offer.rate,
+      startDate: offer.startDate,
+      duration: offer.duration,
+      skills: offer.skills,
+      status: offer.status,
+    }));
+  });
+
+  protected onGreenChange(event: Event): void {
+    this.settings.setGreenThreshold(Number((event.target as HTMLInputElement).value));
+  }
+
+  protected onYellowChange(event: Event): void {
+    this.settings.setYellowThreshold(Number((event.target as HTMLInputElement).value));
+  }
+
+  protected onCollapseChange(event: Event): void {
+    this.settings.setCollapseDuplicates((event.target as HTMLInputElement).checked);
+  }
 }

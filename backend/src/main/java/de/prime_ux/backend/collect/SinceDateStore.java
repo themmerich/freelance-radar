@@ -8,8 +8,11 @@ import java.time.LocalDate;
 import org.springframework.stereotype.Component;
 
 /**
- * „Ab heute"-Merker wie in v1: Beim ersten Lauf wird das heutige Datum
- * festgeschrieben, Altbestand im Postfach bleibt ignoriert. Datei löschen = Reset.
+ * Startdatum-Merker: Beim ersten Lauf wird das heutige Datum festgeschrieben
+ * („ab heute", Altbestand im Postfach bleibt ignoriert; Datei löschen = Reset).
+ * Nach jedem erfolgreichen Lauf rückt der Merker auf das Datum der jüngsten
+ * Mail vor — abgerufene Mails dürfen danach aus dem Postfach gelöscht werden,
+ * ohne dass das Radar etwas verliert.
  */
 @Component
 public class SinceDateStore {
@@ -26,11 +29,31 @@ public class SinceDateStore {
 				return LocalDate.parse(Files.readString(sinceFile).strip());
 			}
 			LocalDate today = LocalDate.now();
-			Files.createDirectories(sinceFile.getParent());
-			Files.writeString(sinceFile, today.toString());
+			write(today);
 			return today;
 		} catch (IOException e) {
 			throw new UncheckedIOException("Startdatum-Merker " + sinceFile + " nicht lesbar/schreibbar", e);
 		}
+	}
+
+	/**
+	 * Rückt den Merker auf {@code date} vor, nie zurück. Bewusst nur bis zum Tag
+	 * der jüngsten Mail (nicht Tag + 1): IMAP-SINCE arbeitet tagesgenau und
+	 * inklusiv, so bleiben später am selben Tag eintreffende Mails auffindbar —
+	 * die Message-ID-Dedup filtert die dabei erneut gesehenen.
+	 */
+	public void advanceTo(LocalDate date) {
+		if (date.isAfter(get())) {
+			try {
+				write(date);
+			} catch (IOException e) {
+				throw new UncheckedIOException("Startdatum-Merker " + sinceFile + " nicht schreibbar", e);
+			}
+		}
+	}
+
+	private void write(LocalDate date) throws IOException {
+		Files.createDirectories(sinceFile.getParent());
+		Files.writeString(sinceFile, date.toString());
 	}
 }
