@@ -9,20 +9,25 @@ const OFFER = {
   agentName: 'Angular',
   projectTitle: 'Senior Angular Entwickler',
   company: 'softwareXperts GmbH',
-  role: null,
+  role: 'Angular Entwickler',
   location: 'Hamburg',
+  country: 'AT',
   remote: 'REMOTE',
   rate: null,
-  startDate: null,
+  startDate: '09/2026',
   duration: null,
   projectUrl: 'https://www.freelancermap.de/nproj/3026991.html',
-  matchScore: null,
-  matchReason: null,
-  seniority: null,
-  industry: null,
+  matchScore: 85,
+  matchReason: 'Kern-Stack Angular, remote — passt sehr gut zum Profil.',
+  seniority: 'senior',
+  industry: 'unbekannt',
   primary: true,
   dupCount: 2,
-  status: 'NEW',
+  status: 'ANALYZED',
+  skills: [
+    { name: 'Angular', gap: false },
+    { name: 'Kotlin', gap: true },
+  ],
 };
 
 // Dieselbe freelancermap-Projekt-ID über einen zweiten Agenten: nicht primär,
@@ -41,9 +46,9 @@ const RUN = {
   ranAt: '2026-07-22T10:00:00Z',
   newOffers: 1,
   totalSeen: 1,
-  analyzedOffers: 0,
-  inputTokens: 0,
-  outputTokens: 0,
+  analyzedOffers: 1,
+  inputTokens: 12000,
+  outputTokens: 800,
   note: 'since=2026-07-22',
 };
 
@@ -69,7 +74,7 @@ test.describe('Offers dashboard e2e', () => {
   // Self-test: the route loaded and the dashboard rendered its card.
   test('renders the dashboard (self-test)', async ({ page }) => {
     await expect(page.getByText('Freelance Radar')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Fetch mails' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Fetch & analyze mails' })).toBeVisible();
   });
 
   test('shows the empty state before the first run', async ({ page }) => {
@@ -77,16 +82,28 @@ test.describe('Offers dashboard e2e', () => {
     await expect(page.getByText('No offers yet. Fetch mails with the button above.')).toBeVisible();
   });
 
-  test('fetching mails fills the table and updates the last run', async ({ page }) => {
-    await page.getByRole('button', { name: 'Fetch mails' }).click();
+  test('a run fills the table with the score traffic light and reports cost', async ({ page }) => {
+    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
 
     await expect(page.getByRole('cell', { name: 'Senior Angular Entwickler' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: 'Hamburg' })).toBeVisible();
-    await expect(page.getByText('Last run: 1 new of 1 seen')).toBeVisible();
+    await expect(page.getByRole('cell', { name: '85' })).toBeVisible();
+    await expect(page.getByRole('cell', { name: '🇦🇹 AT' })).toBeVisible();
+    // 12 000 Input- + 800 Output-Tokens auf Haiku ≈ 1,6 US-Cent
+    await expect(page.getByText('Last run: 1 new of 1 seen · 1 analyzed · ≈1.6 ct')).toBeVisible();
+  });
+
+  test('expanding a row shows the match reason and the skill gaps', async ({ page }) => {
+    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
+    await expect(page.getByRole('cell', { name: 'Senior Angular Entwickler' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Details' }).click();
+
+    await expect(page.getByText('Kern-Stack Angular, remote — passt sehr gut zum Profil.')).toBeVisible();
+    await expect(page.getByText('Kotlin')).toBeVisible();
   });
 
   test('collapses the same project caught by two agents into one badged row', async ({ page }) => {
-    await page.getByRole('button', { name: 'Fetch mails' }).click();
+    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
 
     // Only the primary row is rendered — with the spread badge instead of a duplicate line.
     await expect(page.getByRole('cell', { name: /Senior Angular Entwickler/ })).toHaveCount(1);
@@ -94,12 +111,12 @@ test.describe('Offers dashboard e2e', () => {
     await expect(page.getByRole('cell', { name: 'Java Spring' })).toHaveCount(0);
   });
 
-  test('shows an error message when the collect run fails', async ({ page }) => {
+  test('shows an error message when the run fails', async ({ page }) => {
     await page.unroute('**/api/runs');
     await page.route('**/api/runs', (route) => route.fulfill({ status: 502, json: { detail: 'IMAP-Abruf fehlgeschlagen' } }));
 
-    await page.getByRole('button', { name: 'Fetch mails' }).click();
+    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
 
-    await expect(page.getByRole('alert')).toContainText('Fetching failed');
+    await expect(page.getByRole('alert')).toContainText('The run failed');
   });
 });

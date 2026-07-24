@@ -1,22 +1,33 @@
 {
   "offers": {
     "title": "Freelance Radar",
-    "collect": "Fetch mails",
+    "collect": "Fetch & analyze mails",
     "lastRun": "Last run: {{newOffers}} new of {{totalSeen}} seen",
+    "lastRunAnalyzed": "{{analyzed}} analyzed",
     "noRunYet": "No run yet — fetch mails now.",
-    "collectError": "Fetching failed. Check the GMX credentials and connection.",
+    "collectError": "The run failed. Check the GMX credentials and connection.",
     "loadError": "Offers could not be loaded.",
     "empty": "No offers yet. Fetch mails with the button above.",
     "dupBadge": "spread {{count}}×",
     "table": {
+      "details": "Details",
       "received": "Received",
+      "score": "Match",
       "source": "Source",
       "agent": "Agent",
       "title": "Project",
       "company": "Company",
+      "country": "Country",
       "location": "Location",
       "remote": "Remote",
       "status": "Status"
+    },
+    "detail": {
+      "notAnalyzed": "Not analyzed yet.",
+      "skills": "Skills (red = missing from profile)",
+      "rate": "Rate",
+      "start": "Start",
+      "duration": "Duration"
     },
     "source": {
       "AGENT": "Agent",

@@ -1,6 +1,7 @@
 package de.prime_ux.backend.offer;
 
 import java.time.Instant;
+import java.util.List;
 
 public record OfferResponse(
 	Long id,
@@ -13,6 +14,7 @@ public record OfferResponse(
 	String company,
 	String role,
 	String location,
+	String country,
 	Remote remote,
 	String rate,
 	String startDate,
@@ -24,9 +26,12 @@ public record OfferResponse(
 	String industry,
 	boolean primary,
 	int dupCount,
-	OfferStatus status
+	OfferStatus status,
+	List<SkillResponse> skills
 ) {
-	static OfferResponse from(Offer offer) {
+	public record SkillResponse(String name, boolean gap) {}
+
+	static OfferResponse from(Offer offer, List<OfferSkill> offerSkills) {
 		return new OfferResponse(
 			offer.getId(),
 			offer.getReceivedAt(),
@@ -38,6 +43,7 @@ public record OfferResponse(
 			offer.getCompany(),
 			offer.getRole(),
 			offer.getLocation(),
+			offer.getCountry(),
 			offer.getRemote(),
 			offer.getRate(),
 			offer.getStartDate(),
@@ -49,7 +55,8 @@ public record OfferResponse(
 			offer.getIndustry(),
 			offer.isPrimary(),
 			offer.getDupCount(),
-			offer.getStatus()
+			offer.getStatus(),
+			offerSkills.stream().map(skill -> new SkillResponse(skill.getId().getSkill(), skill.isGap())).toList()
 		);
 	}
 }

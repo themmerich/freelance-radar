@@ -67,6 +67,9 @@ public class Offer {
 	@Column(columnDefinition = "text")
 	private String location;
 
+	@Column(columnDefinition = "text")
+	private String country;
+
 	@Enumerated(EnumType.STRING)
 	@Column(columnDefinition = "text")
 	private Remote remote;

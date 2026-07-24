@@ -18,6 +18,8 @@ repositories {
 }
 
 dependencies {
+	implementation(platform("org.springframework.ai:spring-ai-bom:2.0.0"))
+	implementation("org.springframework.ai:spring-ai-starter-model-anthropic")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-flyway")
 	implementation("org.springframework.boot:spring-boot-starter-mail")

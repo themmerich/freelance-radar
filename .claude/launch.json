@@ -12,6 +12,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["-C", "frontend", "start:local"],
       "port": 4200
+    },
+    {
+      "name": "frontend-4300",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["-C", "frontend", "start:local"],
+      "port": 4300
     }
   ]
 }

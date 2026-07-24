@@ -17,6 +17,7 @@ const OFFER: Offer = {
   company: 'softwareXperts GmbH',
   role: null,
   location: 'Hamburg',
+  country: 'DE',
   remote: 'REMOTE',
   rate: null,
   startDate: null,
@@ -29,6 +30,7 @@ const OFFER: Offer = {
   primary: true,
   dupCount: 1,
   status: 'NEW',
+  skills: [],
 };
 
 const RUN: Run = {

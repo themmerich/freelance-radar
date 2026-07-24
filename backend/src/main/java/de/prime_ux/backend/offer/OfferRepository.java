@@ -11,4 +11,6 @@ public interface OfferRepository extends JpaRepository<Offer, Long> {
 	boolean existsByMessageId(String messageId);
 
 	Optional<Offer> findFirstByDupGroupAndPrimaryTrue(String dupGroup);
+
+	List<Offer> findByStatusAndPrimaryTrueOrderByReceivedAtAsc(OfferStatus status);
 }

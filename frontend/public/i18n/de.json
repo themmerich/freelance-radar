@@ -1,22 +1,33 @@
 {
   "offers": {
     "title": "Freelance Radar",
-    "collect": "Mails abrufen",
+    "collect": "Mails abrufen & analysieren",
     "lastRun": "Letzter Lauf: {{newOffers}} neu von {{totalSeen}} gesehen",
+    "lastRunAnalyzed": "{{analyzed}} analysiert",
     "noRunYet": "Noch kein Lauf — jetzt Mails abrufen.",
-    "collectError": "Der Abruf ist fehlgeschlagen. GMX-Zugangsdaten und Verbindung prüfen.",
+    "collectError": "Der Lauf ist fehlgeschlagen. GMX-Zugangsdaten und Verbindung prüfen.",
     "loadError": "Angebote konnten nicht geladen werden.",
     "empty": "Noch keine Angebote. Über den Button oben Mails abrufen.",
     "dupBadge": "{{count}}× gestreut",
     "table": {
+      "details": "Details",
       "received": "Eingegangen",
+      "score": "Match",
       "source": "Quelle",
       "agent": "Agent",
       "title": "Projekt",
       "company": "Firma",
+      "country": "Land",
       "location": "Ort",
       "remote": "Remote",
       "status": "Status"
+    },
+    "detail": {
+      "notAnalyzed": "Noch nicht analysiert.",
+      "skills": "Skills (rot = fehlt im Profil)",
+      "rate": "Rate",
+      "start": "Start",
+      "duration": "Laufzeit"
     },
     "source": {
       "AGENT": "Agent",

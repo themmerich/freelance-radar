@@ -14,7 +14,7 @@ Obsidian-Vault: `02 Projekte/Freelance Radar 2.md`.
 | Path                                         | Contents                                                                                  |
 | -------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | [`frontend/`](frontend/README.md)            | Angular 22 single-page app — pnpm, PrimeNG, Transloco, NgRx Signals, Tailwind             |
-| [`backend/`](backend/AGENTS.md)              | Spring Boot 4.1 service — Gradle (Kotlin DSL), Java 25, JPA, Flyway, Spring AI (geplant)  |
+| [`backend/`](backend/AGENTS.md)              | Spring Boot 4.1 service — Gradle (Kotlin DSL), Java 25, JPA, Flyway, Spring AI 2.0        |
 | [`style-guide/`](style-guide/style-guide.md) | Per-file-type style guides (TypeScript, templates, SCSS, a11y, tests, npm, git, markdown) |
 | [`.claude/skills/`](SKILLS.md)               | Task-specific agent skills, indexed in [`SKILLS.md`](SKILLS.md)                           |
 | [`scripts/`](scripts/)                       | Repo verification — shared check runner, full-suite verify, Claude Code Stop hook         |
@@ -22,8 +22,9 @@ Obsidian-Vault: `02 Projekte/Freelance Radar 2.md`.
 Das Repo basiert auf dem tapout-ai-Referenz-Setup (Angular/Spring-Boot-Monorepo mit
 Style-Guides, Skills, Sheriff-Modulgrenzen und Verify-Skripten). Die vertikale Slice:
 Flyway-Schema (`offers`, `offer_skills`, `runs`) → JPA → `ImapService`/`ParserService`
-→ REST (`GET /api/offers`, `POST /api/runs`) → Angular-Dashboard (Sheriff-Scope
-`offers`) mit Abruf-Button und Angebotstabelle.
+→ `AnalysisService` (Spring AI, `claude-haiku-4-5`, ein Batch-Request pro Lauf mit
+Kostendeckel) → REST (`GET /api/offers`, `POST /api/runs`) → Angular-Dashboard
+(Sheriff-Scope `offers`) mit Score-Ampel, Kostenanzeige und Detail-Ansicht.
 
 ## Prerequisites
 
