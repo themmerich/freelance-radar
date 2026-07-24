@@ -22,6 +22,26 @@
       "remote": "Remote",
       "status": "Status"
     },
+    "kpi": {
+      "today": "Heute",
+      "last7Days": "7 Tage",
+      "last30Days": "30 Tage",
+      "averageScore": "Ø Match-Score",
+      "greenShare": "Anteil 🟢"
+    },
+    "charts": {
+      "perDay": "Angebote pro Tag (30 Tage)",
+      "sources": "Agent vs. Privat",
+      "agents": "Trigger pro Agent",
+      "topSkills": "Top nachgefragte Skills",
+      "topGaps": "Top Skill-Gaps",
+      "scores": "Match-Score-Verteilung"
+    },
+    "settings": {
+      "greenFrom": "ab",
+      "yellowFrom": "ab",
+      "collapseDuplicates": "Duplikate zusammenfassen"
+    },
     "detail": {
       "notAnalyzed": "Noch nicht analysiert.",
       "skills": "Skills (rot = fehlt im Profil)",

@@ -5,7 +5,9 @@ import de.prime_ux.backend.offer.Offer;
 import de.prime_ux.backend.offer.OfferRepository;
 import de.prime_ux.backend.run.Run;
 import de.prime_ux.backend.run.RunRepository;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,6 +75,15 @@ public class CollectService {
 			log.warn("Claude-Analyse fehlgeschlagen", e);
 			run.setNote(run.getNote() + "; analyse-fehler: " + e.getMessage());
 		}
+
+		// Erst ganz am Ende vorrücken: schlägt vorher etwas fehl, bleibt das
+		// alte Fenster bestehen und der nächste Lauf holt die Mails erneut.
+		mails
+			.stream()
+			.map(FetchedMail::receivedAt)
+			.max(Instant::compareTo)
+			.ifPresent(newest -> sinceDate.advanceTo(LocalDate.ofInstant(newest, ZoneId.systemDefault())));
+
 		return run;
 	}
 

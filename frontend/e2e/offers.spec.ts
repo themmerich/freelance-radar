@@ -2,7 +2,8 @@ import { expect, test, Page } from '@playwright/test';
 
 const OFFER = {
   id: 1,
-  receivedAt: '2026-07-22T09:15:00Z',
+  // Dynamisch, damit die KPI-Zeitfenster (heute/7/30 Tage) nicht vom realen Datum wegdriften.
+  receivedAt: new Date().toISOString(),
   fromAddr: 'office@freelancermap.de',
   subject: 'Angular - Anzahl neue Projekte: 1',
   sourceType: 'AGENT',
@@ -100,6 +101,35 @@ test.describe('Offers dashboard e2e', () => {
 
     await expect(page.getByText('Kern-Stack Angular, remote — passt sehr gut zum Profil.')).toBeVisible();
     await expect(page.getByText('Kotlin')).toBeVisible();
+  });
+
+  test('shows the kpi tiles and all six charts after a run', async ({ page }) => {
+    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
+
+    await expect(page.getByText('Avg match score')).toBeVisible();
+    // Ein analysiertes Angebot mit Score 85 bei Schwelle 70 → Anteil 🟢 = 100 %.
+    await expect(page.getByText('100 %')).toBeVisible();
+    await expect(page.locator('canvas')).toHaveCount(6);
+  });
+
+  test('raising the green threshold lowers the green share', async ({ page }) => {
+    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
+    await expect(page.getByText('100 %')).toBeVisible();
+
+    const greenInput = page.getByRole('spinbutton').first();
+    await greenInput.fill('90');
+    await greenInput.blur();
+
+    await expect(page.getByText('0 %')).toBeVisible();
+  });
+
+  test('unchecking the duplicate toggle reveals the copies', async ({ page }) => {
+    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
+    await expect(page.getByRole('cell', { name: 'Java Spring' })).toHaveCount(0);
+
+    await page.getByRole('checkbox', { name: 'Collapse duplicates' }).uncheck();
+
+    await expect(page.getByRole('cell', { name: 'Java Spring' })).toBeVisible();
   });
 
   test('collapses the same project caught by two agents into one badged row', async ({ page }) => {

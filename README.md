@@ -24,7 +24,9 @@ Style-Guides, Skills, Sheriff-Modulgrenzen und Verify-Skripten). Die vertikale S
 Flyway-Schema (`offers`, `offer_skills`, `runs`) → JPA → `ImapService`/`ParserService`
 → `AnalysisService` (Spring AI, `claude-haiku-4-5`, ein Batch-Request pro Lauf mit
 Kostendeckel) → REST (`GET /api/offers`, `POST /api/runs`) → Angular-Dashboard
-(Sheriff-Scope `offers`) mit Score-Ampel, Kostenanzeige und Detail-Ansicht.
+(Sheriff-Scope `offers`) mit KPI-Kacheln, 6 Auswertungs-Charts (Chart.js),
+Score-Ampel mit einstellbaren Schwellen, Duplikat-Toggle, Kostenanzeige und
+Detail-Ansicht.
 
 ## Prerequisites
 
