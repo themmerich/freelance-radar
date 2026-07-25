@@ -150,6 +150,28 @@ test.describe('Offers dashboard e2e', () => {
     await expect(page.getByRole('cell', { name: 'Java Spring' })).toHaveCount(0);
   });
 
+  test('paginates the table and filters a column down to nothing', async ({ page }) => {
+    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
+    await expect(page.getByRole('cell', { name: 'Senior Angular Entwickler' })).toBeVisible();
+
+    // Der Paginator meldet den sichtbaren Bereich; ein Angebot ist primär, das Duplikat wird eingeklappt.
+    await expect(page.getByText('1–1 of 1')).toBeVisible();
+
+    // Kern der Änderung: die 11 Spalten sind breiter als der Container, also muss er horizontal scrollen.
+    const scroller = page.locator('.p-datatable-table-container');
+    await expect.poll(() => scroller.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+
+    // Quelle des Angebots ist AGENT — der Filter auf PRIVATE muss die Tabelle leeren.
+    await page
+      .getByRole('columnheader', { name: /Source/ })
+      .getByRole('button')
+      .click();
+    await page.getByRole('combobox', { name: 'Filter by Source' }).selectOption('PRIVATE');
+
+    await expect(page.getByRole('cell', { name: 'Senior Angular Entwickler' })).toHaveCount(0);
+    await expect(page.getByText('No offers yet. Fetch mails with the button above.')).toBeVisible();
+  });
+
   test('switching the profile activates it and reloads the offers', async ({ page }) => {
     const activated = page.waitForRequest((request) => request.url().includes('/api/profiles/2/activate') && request.method() === 'POST');
 
