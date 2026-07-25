@@ -60,6 +60,20 @@ describe('ProfilesStore', () => {
     expect(store.profiles()).toHaveLength(2);
   });
 
+  it('hands the created profile to the callback so the editor can switch to it', async () => {
+    await respondToListReload([STANDARD]);
+
+    let created: Profile | null = null;
+    store.create({ ...STANDARD, name: 'Standard (Kopie)' }, (profile) => (created = profile));
+
+    httpMock
+      .expectOne((req) => req.method === 'POST' && req.url === '/api/profiles')
+      .flush({ ...STANDARD, id: 2, name: 'Standard (Kopie)', active: false });
+    await respondToListReload([STANDARD, { ...STANDARD, id: 2, name: 'Standard (Kopie)', active: false }]);
+
+    expect(created).toMatchObject({ id: 2, name: 'Standard (Kopie)' });
+  });
+
   it('starts a reanalysis run and exposes its result', async () => {
     await respondToListReload([STANDARD]);
 

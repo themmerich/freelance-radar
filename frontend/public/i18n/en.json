@@ -10,6 +10,9 @@
       "active": "Active",
       "activate": "Activate",
       "delete": "Delete profile {{name}}",
+      "duplicate": "Copy profile {{name}}",
+      "copyName": "{{name}} (copy)",
+      "copyNameNumbered": "{{name}} (copy {{count}})",
       "new": "New profile"
     },
     "categories": {
@@ -30,7 +33,12 @@
       "weakSignals": "Weak / no-match signals",
       "addPlaceholder": "Add + Enter",
       "removeItem": "Remove {{item}}",
+      "newTitle": "New profile",
+      "copyOf": "Copy of {{name}}",
+      "modeEdit": "Editing",
+      "modeNew": "New",
       "save": "Save",
+      "create": "Create",
       "saveError": "Saving failed."
     },
     "reanalysis": {

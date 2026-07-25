@@ -1,13 +1,13 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { TranslocoDirective } from '@jsverse/transloco';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { TagModule } from 'primeng/tag';
 
 import { ProfilesStore } from '../data-access/profiles-store';
-import { AnalysisPreview, Profile, ProfileDraft, SKILL_CATEGORIES, emptyDraft } from '../domain/profile';
+import { AnalysisPreview, Profile, ProfileDraft, SKILL_CATEGORIES, draftOf, emptyDraft } from '../domain/profile';
 import { ChipList } from '../ui/chip-list';
 import { runCostCents } from '../../shared/util/run-cost';
 
@@ -31,6 +31,15 @@ import { runCostCents } from '../../shared/util/run-cost';
                     <span class="font-medium">{{ profile.name }}</span>
                     <span class="text-sm text-surface-500">{{ profile.role ?? '—' }}</span>
                   </button>
+                  <!-- Auch für das aktive Profil: die Kopiervorlage ist meist gerade das aktive. -->
+                  <p-button
+                    type="button"
+                    size="small"
+                    icon="pi pi-copy"
+                    [text]="true"
+                    [ariaLabel]="t('profiles.list.duplicate', { name: profile.name })"
+                    (onClick)="duplicate(profile)"
+                  />
                   @if (profile.active) {
                     <p-tag severity="success" [value]="t('profiles.list.active')" />
                   } @else {
@@ -57,6 +66,23 @@ import { runCostCents } from '../../shared/util/run-cost';
             </div>
 
             <div class="flex flex-col gap-6">
+              <!-- Ohne die Kopfzeile sieht Bearbeiten genauso aus wie Anlegen/Kopieren. -->
+              <div class="flex items-center gap-3 border-b border-surface-200 pb-3 dark:border-surface-700">
+                <h3 class="text-lg font-medium">
+                  @if (isEditing()) {
+                    {{ editedName() }}
+                  } @else if (copySource()) {
+                    {{ t('profiles.editor.copyOf', { name: copySource() }) }}
+                  } @else {
+                    {{ t('profiles.editor.newTitle') }}
+                  }
+                </h3>
+                <p-tag
+                  [severity]="isEditing() ? 'secondary' : 'info'"
+                  [value]="isEditing() ? t('profiles.editor.modeEdit') : t('profiles.editor.modeNew')"
+                />
+              </div>
+
               <div class="grid gap-4 sm:grid-cols-2">
                 <label class="flex flex-col gap-1 text-sm">
                   <span class="font-medium">{{ t('profiles.editor.name') }}</span>
@@ -144,8 +170,8 @@ import { runCostCents } from '../../shared/util/run-cost';
               <div class="flex items-center gap-4">
                 <p-button
                   type="button"
-                  icon="pi pi-save"
-                  [label]="t('profiles.editor.save')"
+                  [icon]="isEditing() ? 'pi pi-save' : 'pi pi-plus'"
+                  [label]="isEditing() ? t('profiles.editor.save') : t('profiles.editor.create')"
                   [loading]="store.isSaving()"
                   [disabled]="!draft().name.trim()"
                   (onClick)="save()"
@@ -208,6 +234,7 @@ export class ProfilePage {
   protected readonly skillCategories = SKILL_CATEGORIES;
 
   private readonly destroyRef = inject(DestroyRef);
+  private readonly transloco = inject(TranslocoService);
 
   protected readonly selectedId = signal<number | null>(null);
   protected readonly draft = signal<ProfileDraft>(emptyDraft());
@@ -216,32 +243,65 @@ export class ProfilePage {
 
   protected readonly selectedProfile = computed(() => this.store.profiles().find((profile) => profile.id === this.selectedId()) ?? null);
 
+  /** Editor-Modus: mit `selectedId` wird geändert, ohne angelegt (leer oder als Kopie). */
+  protected readonly isEditing = computed(() => this.selectedId() !== null);
+
+  /** Name der Vorlage, solange eine Kopie im Editor steht — sonst null. */
+  protected readonly copySource = signal<string | null>(null);
+
+  /**
+   * Name des bearbeiteten Profils für die Kopfzeile. Bewusst nicht aus
+   * `selectedProfile()` gelesen: direkt nach dem Anlegen lädt die Liste noch,
+   * das Profil wäre dort kurz nicht zu finden und die Kopfzeile leer.
+   */
+  protected readonly editedName = signal<string | null>(null);
+
   protected select(profile: Profile): void {
     this.selectedId.set(profile.id);
-    this.draft.set({
-      name: profile.name,
-      role: profile.role,
-      focus: profile.focus,
-      industries: profile.industries,
-      region: profile.region,
-      languages: profile.languages,
-      skills: structuredClone(profile.skills),
-      strongSignals: [...profile.strongSignals],
-      weakSignals: [...profile.weakSignals],
-    });
+    this.copySource.set(null);
+    this.editedName.set(profile.name);
+    this.draft.set(draftOf(profile));
     this.loadPreview();
   }
 
   protected startNew(): void {
     this.selectedId.set(null);
+    this.copySource.set(null);
+    this.editedName.set(null);
     this.draft.set(emptyDraft());
     this.preview.set(null);
+  }
+
+  /**
+   * Profil als Vorlage in den Editor holen: alles übernehmen, aber ohne `selectedId`,
+   * damit `save()` anlegt statt zu überschreiben. Angelegt wird erst beim Speichern —
+   * bis dahin lässt sich der Unterschied zum Original bearbeiten.
+   */
+  protected duplicate(profile: Profile): void {
+    this.selectedId.set(null);
+    this.copySource.set(profile.name);
+    this.preview.set(null);
+    this.draft.set({ ...draftOf(profile), name: this.freeCopyName(profile.name) });
+  }
+
+  /** `name` ist in der DB unique — solange hochzählen, bis der Vorschlag frei ist. */
+  private freeCopyName(name: string): string {
+    const taken = new Set(this.store.profiles().map((profile) => profile.name));
+    let candidate = this.transloco.translate('profiles.list.copyName', { name });
+    let count = 2;
+    while (taken.has(candidate)) {
+      candidate = this.transloco.translate('profiles.list.copyNameNumbered', { name, count });
+      count++;
+    }
+    return candidate;
   }
 
   protected save(): void {
     const id = this.selectedId();
     if (id === null) {
-      this.store.create(this.draft());
+      // Nach dem Anlegen auf das neue Profil umschalten, sonst legt ein zweiter
+      // Klick erneut an — und der Name ist dann schon belegt.
+      this.store.create(this.draft(), (profile) => this.select(profile));
     } else {
       this.store.update(id, this.draft());
     }
