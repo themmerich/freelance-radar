@@ -2,9 +2,22 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { TranslocoTestingModule } from '@jsverse/transloco';
+import { MessageService, ToastMessageOptions } from 'primeng/api';
 
 import { Offer, Run } from '../domain/offer';
 import { OffersStore } from './offers-store';
+
+const en = {
+  offers: {
+    collectError: 'The run failed. Check the GMX credentials and connection.',
+    toast: {
+      successSummary: 'Run completed',
+      successDetail: '{{newOffers}} new offers imported from {{totalSeen}} mails · {{analyzed}} analyzed',
+      errorSummary: 'Run failed',
+    },
+  },
+};
 
 const OFFER: Offer = {
   id: 1,
@@ -47,13 +60,23 @@ const RUN: Run = {
 describe('OffersStore', () => {
   let store: OffersStore;
   let httpMock: HttpTestingController;
+  let toasts: ToastMessageOptions[];
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      imports: [
+        TranslocoTestingModule.forRoot({
+          langs: { en },
+          translocoConfig: { availableLangs: ['en'], defaultLang: 'en' },
+          preloadLangs: true,
+        }),
+      ],
+      providers: [provideHttpClient(), provideHttpClientTesting(), MessageService],
     });
     store = TestBed.inject(OffersStore);
     httpMock = TestBed.inject(HttpTestingController);
+    toasts = [];
+    TestBed.inject(MessageService).messageObserver.subscribe((message) => toasts.push(message as ToastMessageOptions));
   });
 
   afterEach(() => httpMock.verify());
@@ -80,7 +103,7 @@ describe('OffersStore', () => {
     expect(store.isLoading()).toBe(false);
   });
 
-  it('triggers a run and reloads offers and latest run', async () => {
+  it('triggers a run, reloads, and toasts the import numbers', async () => {
     await respondToReloads([], null);
 
     store.collect();
@@ -91,8 +114,10 @@ describe('OffersStore', () => {
 
     await respondToReloads([OFFER], RUN);
     expect(store.isCollecting()).toBe(false);
-    expect(store.hasCollectError()).toBe(false);
     expect(store.offers()).toEqual([OFFER]);
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0].severity).toBe('success');
+    expect(toasts[0].detail).toBe('1 new offers imported from 1 mails · 0 analyzed');
   });
 
   it('switches the profile and reloads offers from its perspective', async () => {
@@ -120,16 +145,29 @@ describe('OffersStore', () => {
     expect(store.offers()).toEqual([OFFER]);
   });
 
-  it('flags a failed collect without reloading', async () => {
+  it('toasts the server problem detail when the run fails', async () => {
     await respondToReloads([], null);
 
     store.collect();
 
     httpMock
       .expectOne((req) => req.method === 'POST' && req.url === '/api/runs')
-      .flush({ detail: 'IMAP down' }, { status: 502, statusText: 'Bad Gateway' });
+      .flush({ detail: 'IMAP-Abruf von imap.gmx.net fehlgeschlagen' }, { status: 502, statusText: 'Bad Gateway' });
 
     expect(store.isCollecting()).toBe(false);
-    expect(store.hasCollectError()).toBe(true);
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0].severity).toBe('error');
+    expect(toasts[0].detail).toBe('IMAP-Abruf von imap.gmx.net fehlgeschlagen');
+  });
+
+  it('falls back to the generic error message without a problem detail', async () => {
+    await respondToReloads([], null);
+
+    store.collect();
+
+    httpMock.expectOne((req) => req.method === 'POST' && req.url === '/api/runs').flush(null, { status: 0, statusText: 'Network error' });
+
+    expect(toasts[0].severity).toBe('error');
+    expect(toasts[0].detail).toBe('The run failed. Check the GMX credentials and connection.');
   });
 });

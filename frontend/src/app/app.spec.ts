@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
+import { MessageService } from 'primeng/api';
 import { App } from './app';
 
 const en = { nav: { label: 'Main navigation', dashboard: 'Dashboard', profiles: 'Profiles' } };
@@ -16,7 +17,7 @@ describe('App', () => {
           preloadLangs: true,
         }),
       ],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), MessageService],
     }).compileComponents();
   });
 

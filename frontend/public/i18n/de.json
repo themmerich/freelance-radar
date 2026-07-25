@@ -51,6 +51,11 @@
     "lastRunAnalyzed": "{{analyzed}} analysiert",
     "noRunYet": "Noch kein Lauf — jetzt Mails abrufen.",
     "collectError": "Der Lauf ist fehlgeschlagen. GMX-Zugangsdaten und Verbindung prüfen.",
+    "toast": {
+      "successSummary": "Lauf abgeschlossen",
+      "successDetail": "{{newOffers}} neue Angebote aus {{totalSeen}} Mails importiert · {{analyzed}} analysiert",
+      "errorSummary": "Lauf fehlgeschlagen"
+    },
     "loadError": "Angebote konnten nicht geladen werden.",
     "empty": "Noch keine Angebote. Über den Button oben Mails abrufen.",
     "dupBadge": "{{count}}× gestreut",

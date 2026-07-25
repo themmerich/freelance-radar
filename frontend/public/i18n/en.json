@@ -51,6 +51,11 @@
     "lastRunAnalyzed": "{{analyzed}} analyzed",
     "noRunYet": "No run yet — fetch mails now.",
     "collectError": "The run failed. Check the GMX credentials and connection.",
+    "toast": {
+      "successSummary": "Run completed",
+      "successDetail": "{{newOffers}} new offers imported from {{totalSeen}} mails · {{analyzed}} analyzed",
+      "errorSummary": "Run failed"
+    },
     "loadError": "Offers could not be loaded.",
     "empty": "No offers yet. Fetch mails with the button above.",
     "dupBadge": "spread {{count}}×",
