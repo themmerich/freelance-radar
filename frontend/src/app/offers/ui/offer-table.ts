@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
@@ -36,27 +36,231 @@ const SOURCE_SEVERITY = {
   OTHER: 'secondary',
 } as const;
 
+const SOURCE_TYPES: OfferRow['sourceType'][] = ['AGENT', 'PRIVATE', 'NEWSLETTER', 'OTHER'];
+const REMOTE_MODES: NonNullable<OfferRow['remote']>[] = ['REMOTE', 'HYBRID', 'ONSITE'];
+const STATUSES: OfferRow['status'][] = ['NEW', 'ANALYZED', 'ERROR'];
+
+const ROWS_PER_PAGE = 25;
+const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
+
 @Component({
   selector: 'app-offer-table',
   imports: [DatePipe, TranslocoDirective, ButtonModule, TableModule, TagModule],
   template: `
     <ng-container *transloco="let t">
-      <p-table [value]="offers()" [sortField]="'receivedAt'" [sortOrder]="-1" dataKey="id">
+      <!-- scrollable + tableStyleClass: die 11 Spalten passen nicht in den Container, deshalb horizontal scrollen. -->
+      <p-table
+        [value]="offers()"
+        [sortField]="'receivedAt'"
+        [sortOrder]="-1"
+        dataKey="id"
+        [scrollable]="true"
+        tableStyleClass="min-w-[80rem]"
+        [paginator]="true"
+        [rows]="rowsPerPage"
+        [rowsPerPageOptions]="rowsPerPageOptions"
+        [showCurrentPageReport]="true"
+        [currentPageReportTemplate]="t('offers.table.pageReport')"
+      >
         <ng-template #header>
           <tr>
             <th scope="col" class="w-12">
               <span class="sr-only">{{ t('offers.table.details') }}</span>
             </th>
             <th pSortableColumn="receivedAt" scope="col">{{ t('offers.table.received') }} <p-sort-icon field="receivedAt" /></th>
-            <th pSortableColumn="matchScore" scope="col">{{ t('offers.table.score') }} <p-sort-icon field="matchScore" /></th>
-            <th pSortableColumn="sourceType" scope="col">{{ t('offers.table.source') }} <p-sort-icon field="sourceType" /></th>
-            <th pSortableColumn="agentName" scope="col">{{ t('offers.table.agent') }} <p-sort-icon field="agentName" /></th>
-            <th scope="col">{{ t('offers.table.title') }}</th>
-            <th scope="col">{{ t('offers.table.company') }}</th>
-            <th pSortableColumn="country" scope="col">{{ t('offers.table.country') }} <p-sort-icon field="country" /></th>
-            <th scope="col">{{ t('offers.table.location') }}</th>
-            <th scope="col">{{ t('offers.table.remote') }}</th>
-            <th scope="col">{{ t('offers.table.status') }}</th>
+
+            <th pSortableColumn="matchScore" scope="col">
+              <div class="flex items-center gap-1">
+                <span>{{ t('offers.table.score') }}</span>
+                <p-sort-icon field="matchScore" />
+                <p-column-filter
+                  type="numeric"
+                  field="matchScore"
+                  display="menu"
+                  matchMode="gte"
+                  [showOperator]="false"
+                  [showAddButton]="false"
+                  [placeholder]="t('offers.table.filterLabel', { column: t('offers.table.score') })"
+                />
+              </div>
+            </th>
+
+            <th pSortableColumn="sourceType" scope="col">
+              <div class="flex items-center gap-1">
+                <span>{{ t('offers.table.source') }}</span>
+                <p-sort-icon field="sourceType" />
+                <p-column-filter
+                  field="sourceType"
+                  display="menu"
+                  matchMode="equals"
+                  [showMatchModes]="false"
+                  [showOperator]="false"
+                  [showAddButton]="false"
+                  [showApplyButton]="false"
+                >
+                  <ng-template #filter let-value let-filter="filterCallback">
+                    <select
+                      class="w-full rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
+                      [attr.aria-label]="t('offers.table.filterLabel', { column: t('offers.table.source') })"
+                      [value]="value ?? ''"
+                      (change)="filter(selectedFilter($event))"
+                    >
+                      <option value="">{{ t('offers.table.filterAll') }}</option>
+                      @for (sourceType of sourceTypes; track sourceType) {
+                        <option [value]="sourceType">{{ t('offers.source.' + sourceType) }}</option>
+                      }
+                    </select>
+                  </ng-template>
+                </p-column-filter>
+              </div>
+            </th>
+
+            <th pSortableColumn="agentName" scope="col">
+              <div class="flex items-center gap-1">
+                <span>{{ t('offers.table.agent') }}</span>
+                <p-sort-icon field="agentName" />
+                <p-column-filter
+                  type="text"
+                  field="agentName"
+                  display="menu"
+                  [showOperator]="false"
+                  [showAddButton]="false"
+                  [placeholder]="t('offers.table.filterLabel', { column: t('offers.table.agent') })"
+                />
+              </div>
+            </th>
+
+            <!-- Die wichtigste Spalte bekommt Mindestbreite, sonst bricht jeder Titel auf drei Zeilen. -->
+            <th scope="col" class="min-w-56">
+              <div class="flex items-center gap-1">
+                <span>{{ t('offers.table.title') }}</span>
+                <p-column-filter
+                  type="text"
+                  field="title"
+                  display="menu"
+                  [showOperator]="false"
+                  [showAddButton]="false"
+                  [placeholder]="t('offers.table.filterLabel', { column: t('offers.table.title') })"
+                />
+              </div>
+            </th>
+
+            <th scope="col">
+              <div class="flex items-center gap-1">
+                <span>{{ t('offers.table.company') }}</span>
+                <p-column-filter
+                  type="text"
+                  field="company"
+                  display="menu"
+                  [showOperator]="false"
+                  [showAddButton]="false"
+                  [placeholder]="t('offers.table.filterLabel', { column: t('offers.table.company') })"
+                />
+              </div>
+            </th>
+
+            <th pSortableColumn="country" scope="col">
+              <div class="flex items-center gap-1">
+                <span>{{ t('offers.table.country') }}</span>
+                <p-sort-icon field="country" />
+                <p-column-filter
+                  field="country"
+                  display="menu"
+                  matchMode="equals"
+                  [showMatchModes]="false"
+                  [showOperator]="false"
+                  [showAddButton]="false"
+                  [showApplyButton]="false"
+                >
+                  <!-- Länder kommen aus den Daten, nicht aus einer Enum — nur was da ist, ist wählbar. -->
+                  <ng-template #filter let-value let-filter="filterCallback">
+                    <select
+                      class="w-full rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
+                      [attr.aria-label]="t('offers.table.filterLabel', { column: t('offers.table.country') })"
+                      [value]="value ?? ''"
+                      (change)="filter(selectedFilter($event))"
+                    >
+                      <option value="">{{ t('offers.table.filterAll') }}</option>
+                      @for (country of countries(); track country) {
+                        <option [value]="country">{{ flag(country) }} {{ country }}</option>
+                      }
+                    </select>
+                  </ng-template>
+                </p-column-filter>
+              </div>
+            </th>
+
+            <th scope="col">
+              <div class="flex items-center gap-1">
+                <span>{{ t('offers.table.location') }}</span>
+                <p-column-filter
+                  type="text"
+                  field="location"
+                  display="menu"
+                  [showOperator]="false"
+                  [showAddButton]="false"
+                  [placeholder]="t('offers.table.filterLabel', { column: t('offers.table.location') })"
+                />
+              </div>
+            </th>
+
+            <th scope="col">
+              <div class="flex items-center gap-1">
+                <span>{{ t('offers.table.remote') }}</span>
+                <p-column-filter
+                  field="remote"
+                  display="menu"
+                  matchMode="equals"
+                  [showMatchModes]="false"
+                  [showOperator]="false"
+                  [showAddButton]="false"
+                  [showApplyButton]="false"
+                >
+                  <ng-template #filter let-value let-filter="filterCallback">
+                    <select
+                      class="w-full rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
+                      [attr.aria-label]="t('offers.table.filterLabel', { column: t('offers.table.remote') })"
+                      [value]="value ?? ''"
+                      (change)="filter(selectedFilter($event))"
+                    >
+                      <option value="">{{ t('offers.table.filterAll') }}</option>
+                      @for (remoteMode of remoteModes; track remoteMode) {
+                        <option [value]="remoteMode">{{ t('offers.remote.' + remoteMode) }}</option>
+                      }
+                    </select>
+                  </ng-template>
+                </p-column-filter>
+              </div>
+            </th>
+
+            <th scope="col">
+              <div class="flex items-center gap-1">
+                <span>{{ t('offers.table.status') }}</span>
+                <p-column-filter
+                  field="status"
+                  display="menu"
+                  matchMode="equals"
+                  [showMatchModes]="false"
+                  [showOperator]="false"
+                  [showAddButton]="false"
+                  [showApplyButton]="false"
+                >
+                  <ng-template #filter let-value let-filter="filterCallback">
+                    <select
+                      class="w-full rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
+                      [attr.aria-label]="t('offers.table.filterLabel', { column: t('offers.table.status') })"
+                      [value]="value ?? ''"
+                      (change)="filter(selectedFilter($event))"
+                    >
+                      <option value="">{{ t('offers.table.filterAll') }}</option>
+                      @for (status of statuses; track status) {
+                        <option [value]="status">{{ t('offers.status.' + status) }}</option>
+                      }
+                    </select>
+                  </ng-template>
+                </p-column-filter>
+              </div>
+            </th>
           </tr>
         </ng-template>
         <ng-template #body let-offer let-expanded="expanded">
@@ -161,6 +365,27 @@ export class OfferTable {
   /** Ampel-Schwellen (v1-Defaults 🟢 ≥ 70, 🟡 ≥ 40), im Dashboard einstellbar. */
   readonly greenThreshold = input(70);
   readonly yellowThreshold = input(40);
+
+  protected readonly rowsPerPage = ROWS_PER_PAGE;
+  protected readonly rowsPerPageOptions = ROWS_PER_PAGE_OPTIONS;
+  protected readonly sourceTypes = SOURCE_TYPES;
+  protected readonly remoteModes = REMOTE_MODES;
+  protected readonly statuses = STATUSES;
+
+  /** Auswahl des Länderfilters — nur Länder, die in den Angeboten vorkommen. */
+  protected readonly countries = computed(() =>
+    [...new Set(this.offers().flatMap((offer) => (offer.country ? [offer.country] : [])))].sort((a, b) => a.localeCompare(b)),
+  );
+
+  /**
+   * Wert eines Filter-`<select>` für PrimeNG aufbereiten: „Alle" ist ein leerer
+   * Options-Wert, muss aber als `null` zurückgehen — auf `''` würde PrimeNG
+   * sonst alle Zeilen wegfiltern, statt den Filter zu entfernen.
+   */
+  protected selectedFilter(event: Event): string | null {
+    const value = (event.target as HTMLSelectElement).value;
+    return value === '' ? null : value;
+  }
 
   protected severity(sourceType: OfferRow['sourceType']): 'info' | 'success' | 'secondary' {
     return SOURCE_SEVERITY[sourceType];

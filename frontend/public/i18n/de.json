@@ -70,7 +70,10 @@
       "country": "Land",
       "location": "Ort",
       "remote": "Remote",
-      "status": "Status"
+      "status": "Status",
+      "pageReport": "{first}–{last} von {totalRecords}",
+      "filterAll": "Alle",
+      "filterLabel": "Nach {{column}} filtern"
     },
     "kpi": {
       "today": "Heute",

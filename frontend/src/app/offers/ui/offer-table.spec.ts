@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { TranslocoTestingModule } from '@jsverse/transloco';
+import { Table } from 'primeng/table';
 
 import { OfferTable, OfferRow } from './offer-table';
 
@@ -19,6 +21,9 @@ const en = {
       location: 'Location',
       remote: 'Remote',
       status: 'Status',
+      pageReport: '{first}–{last} of {totalRecords}',
+      filterAll: 'All',
+      filterLabel: 'Filter by {{column}}',
     },
     detail: {
       notAnalyzed: 'Not analyzed yet.',
@@ -123,5 +128,60 @@ describe('OfferTable', () => {
     fixture.detectChanges();
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('No offers yet.');
+  });
+
+  it('renders only one page of rows and reports the page range', () => {
+    const fixture = TestBed.createComponent(OfferTable);
+    fixture.componentRef.setInput(
+      'offers',
+      Array.from({ length: 30 }, (_, index) => ({ ...ROW, id: index + 1 })),
+    );
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelectorAll('tbody tr')).toHaveLength(25);
+    expect(element.textContent).toContain('1–25 of 30');
+    // Das Seitengrößen-Dropdown des Paginators bietet die vier Stufen an.
+    expect(element.querySelector('p-select')).not.toBeNull();
+  });
+
+  it('scrolls horizontally instead of squeezing the columns', () => {
+    const fixture = TestBed.createComponent(OfferTable);
+    fixture.componentRef.setInput('offers', [ROW]);
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('table')?.className).toContain('min-w-[80rem]');
+  });
+
+  it('filters rows by column value', () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = TestBed.createComponent(OfferTable);
+      fixture.componentRef.setInput('offers', [ROW, { ...ROW, id: 8, sourceType: 'PRIVATE' as const, company: 'Direkt AG' }]);
+      fixture.detectChanges();
+
+      const table = fixture.debugElement.query(By.directive(Table)).componentInstance as Table;
+      table.filter('PRIVATE', 'sourceType', 'equals');
+      // PrimeNG entprellt Filter um `filterDelay` (300 ms), sonst greift der Filter noch nicht.
+      vi.advanceTimersByTime(300);
+      fixture.detectChanges();
+
+      const element = fixture.nativeElement as HTMLElement;
+      expect(element.querySelectorAll('tbody tr')).toHaveLength(1);
+      expect(element.textContent).toContain('Direkt AG');
+      expect(element.textContent).not.toContain('softwareXperts GmbH');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('offers a filter for every filterable column', () => {
+    const fixture = TestBed.createComponent(OfferTable);
+    fixture.componentRef.setInput('offers', [ROW]);
+    fixture.detectChanges();
+
+    // Match, Quelle, Agent, Projekt, Firma, Land, Ort, Remote, Status — „Eingegangen" bleibt sortierbar.
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('p-column-filter')).toHaveLength(9);
   });
 });
