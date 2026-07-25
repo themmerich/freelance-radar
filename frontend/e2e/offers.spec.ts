@@ -98,6 +98,8 @@ test.describe('Offers dashboard e2e', () => {
     await expect(page.getByRole('cell', { name: '🇦🇹 AT' })).toBeVisible();
     // 12 000 Input- + 800 Output-Tokens auf Haiku ≈ 1,6 US-Cent
     await expect(page.getByText('Last run: 1 new of 1 seen · 1 analyzed · ≈1.6 ct')).toBeVisible();
+    // Der Erfolgs-Toast meldet die Importzahlen.
+    await expect(page.getByText('1 new offers imported from 1 mails · 1 analyzed')).toBeVisible();
   });
 
   test('expanding a row shows the match reason and the skill gaps', async ({ page }) => {
@@ -156,12 +158,14 @@ test.describe('Offers dashboard e2e', () => {
     await activated;
   });
 
-  test('shows an error message when the run fails', async ({ page }) => {
+  test('shows an error toast with the server detail when the run fails', async ({ page }) => {
     await page.unroute('**/api/runs');
     await page.route('**/api/runs', (route) => route.fulfill({ status: 502, json: { detail: 'IMAP-Abruf fehlgeschlagen' } }));
 
     await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
 
-    await expect(page.getByRole('alert')).toContainText('The run failed');
+    // Der Fehler-Toast trägt das Problem-Detail des Backends.
+    await expect(page.getByRole('alert')).toContainText('Run failed');
+    await expect(page.getByRole('alert')).toContainText('IMAP-Abruf fehlgeschlagen');
   });
 });

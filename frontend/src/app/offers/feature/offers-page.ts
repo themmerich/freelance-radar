@@ -59,10 +59,6 @@ const TOP_SKILL_LIMIT = 10;
               }
             </div>
 
-            @if (store.hasCollectError()) {
-              <p class="text-red-500" role="alert">{{ t('offers.collectError') }}</p>
-            }
-
             @if (store.isLoading()) {
               <p-progress-spinner [style]="{ width: '2rem', height: '2rem' }" [ariaLabel]="t('offers.title')" />
             } @else if (store.hasError()) {
