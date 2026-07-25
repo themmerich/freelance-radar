@@ -27,6 +27,21 @@ export type AnalysisPreview = {
 
 export const SKILL_CATEGORIES = ['ai_agentic', 'frontend', 'backend', 'devops_testing', 'methods'] as const;
 
+/** Profil in einen bearbeitbaren Draft überführen; Listen werden kopiert, nicht geteilt. */
+export function draftOf(profile: Profile): ProfileDraft {
+  return {
+    name: profile.name,
+    role: profile.role,
+    focus: profile.focus,
+    industries: profile.industries,
+    region: profile.region,
+    languages: profile.languages,
+    skills: structuredClone(profile.skills),
+    strongSignals: [...profile.strongSignals],
+    weakSignals: [...profile.weakSignals],
+  };
+}
+
 export function emptyDraft(): ProfileDraft {
   return {
     name: '',

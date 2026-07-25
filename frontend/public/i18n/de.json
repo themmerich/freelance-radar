@@ -10,6 +10,9 @@
       "active": "Aktiv",
       "activate": "Aktivieren",
       "delete": "Profil {{name}} löschen",
+      "duplicate": "Profil {{name}} kopieren",
+      "copyName": "{{name}} (Kopie)",
+      "copyNameNumbered": "{{name}} (Kopie {{count}})",
       "new": "Neues Profil"
     },
     "categories": {
@@ -30,7 +33,12 @@
       "weakSignals": "Schwache / No-Match-Signale",
       "addPlaceholder": "Hinzufügen + Enter",
       "removeItem": "{{item}} entfernen",
+      "newTitle": "Neues Profil",
+      "copyOf": "Kopie von {{name}}",
+      "modeEdit": "Bearbeiten",
+      "modeNew": "Neu",
       "save": "Speichern",
+      "create": "Anlegen",
       "saveError": "Speichern fehlgeschlagen."
     },
     "reanalysis": {

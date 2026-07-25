@@ -30,8 +30,9 @@ export class ProfilesStore {
   private readonly reanalysisRun = signal<Run | null>(null);
   readonly lastReanalysisRun = this.reanalysisRun.asReadonly();
 
-  create(draft: ProfileDraft): void {
-    this.mutate(this.http.post<Profile>(PROFILES_URL, draft));
+  /** `onCreated` bekommt das angelegte Profil — der Editor wechselt damit in den Ändern-Modus. */
+  create(draft: ProfileDraft, onCreated?: (profile: Profile) => void): void {
+    this.mutate(this.http.post<Profile>(PROFILES_URL, draft), onCreated);
   }
 
   update(id: number, draft: ProfileDraft): void {
@@ -73,13 +74,14 @@ export class ProfilesStore {
     return this.http.get<AnalysisPreview>(`${ANALYSES_URL}/preview`, { params });
   }
 
-  private mutate(request: Observable<unknown>): void {
+  private mutate<T>(request: Observable<T>, onSuccess?: (value: T) => void): void {
     this.saving.set(true);
     this.failed.set(false);
     request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
+      next: (value) => {
         this.saving.set(false);
         this.profilesResource.reload();
+        onSuccess?.(value);
       },
       error: () => {
         this.saving.set(false);
