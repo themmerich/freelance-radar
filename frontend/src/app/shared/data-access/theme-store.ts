@@ -23,7 +23,7 @@ export class ThemeStore {
   setDark(value: boolean): void {
     this.state.set(value);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
     } catch {
       // Ohne localStorage (z.B. strikte Privacy-Einstellungen) gilt die Wahl nur für die Session.
     }
@@ -33,7 +33,7 @@ export class ThemeStore {
 /** Ohne gespeicherte Wahl entscheidet die OS-Einstellung — danach übernimmt der Switch. */
 function load(): boolean {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw !== null) {
       return JSON.parse(raw) as boolean;
     }

@@ -6,7 +6,7 @@ const STORAGE_KEY = 'freelance-radar.theme';
 
 describe('ThemeStore', () => {
   afterEach(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(STORAGE_KEY);
     document.documentElement.classList.remove('dark');
     vi.unstubAllGlobals();
   });
@@ -26,7 +26,7 @@ describe('ThemeStore', () => {
   });
 
   it('applies the initial value to <html> without waiting for a change', () => {
-    localStorage.setItem(STORAGE_KEY, 'true');
+    window.localStorage.setItem(STORAGE_KEY, 'true');
 
     TestBed.inject(ThemeStore);
     TestBed.tick();
@@ -40,16 +40,16 @@ describe('ThemeStore', () => {
     store.setDark(true);
     TestBed.tick();
     expect(document.documentElement.classList.contains('dark')).toBe(true);
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('true');
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('true');
 
     store.setDark(false);
     TestBed.tick();
     expect(document.documentElement.classList.contains('dark')).toBe(false);
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('false');
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('false');
   });
 
   it('prefers the stored choice over the OS preference', () => {
-    localStorage.setItem(STORAGE_KEY, 'false');
+    window.localStorage.setItem(STORAGE_KEY, 'false');
     stubOsDark(true);
 
     expect(TestBed.inject(ThemeStore).dark()).toBe(false);

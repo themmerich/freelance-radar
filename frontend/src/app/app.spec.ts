@@ -42,7 +42,7 @@ describe('App', () => {
 
   afterEach(() => {
     // ThemeStore schreibt echt auf <html> und localStorage — sonst leckt ein Test in den nächsten.
-    localStorage.removeItem(THEME_STORAGE_KEY);
+    window.localStorage.removeItem(THEME_STORAGE_KEY);
     document.documentElement.classList.remove('dark');
   });
 
