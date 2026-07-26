@@ -8,6 +8,7 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { OffersStore } from '../data-access/offers-store';
 import { SettingsStore } from '../data-access/settings-store';
 import { runCostCents } from '../../shared/util/run-cost';
+import { ThemeStore } from '../../shared/data-access/theme-store';
 import { countBySource, kpis, offersPerDay, scoreHistogram, topSkills, triggersPerAgent } from '../util/offer-stats';
 import { KpiTiles } from '../ui/kpi-tiles';
 import { OfferCharts } from '../ui/offer-charts';
@@ -75,6 +76,7 @@ const TOP_SKILL_LIMIT = 10;
                 [histogram]="histogram()"
                 [greenThreshold]="settings.greenThreshold()"
                 [yellowThreshold]="settings.yellowThreshold()"
+                [dark]="theme.dark()"
               />
 
               <div class="flex flex-wrap items-center gap-6 text-sm">
@@ -121,6 +123,7 @@ const TOP_SKILL_LIMIT = 10;
 export class OffersPage {
   protected readonly store = inject(OffersStore);
   protected readonly settings = inject(SettingsStore);
+  protected readonly theme = inject(ThemeStore);
   protected readonly costCents = runCostCents;
 
   protected readonly activeProfileId = computed(() => this.store.profileOptions().find((profile) => profile.active)?.id ?? null);

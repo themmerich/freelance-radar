@@ -1,4 +1,4 @@
-import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { ChartModule } from 'primeng/chart';
 
@@ -79,19 +79,10 @@ export class OfferCharts {
   readonly histogram = input.required<number[]>();
   readonly greenThreshold = input.required<number>();
   readonly yellowThreshold = input.required<number>();
+  /** Von der Seite durchgereicht (ThemeStore) — reine Präsentationskomponente, kein eigener Service. */
+  readonly dark = input.required<boolean>();
 
   private readonly transloco = inject(TranslocoService);
-  private readonly dark = signal(false);
-
-  constructor() {
-    const media = window.matchMedia?.('(prefers-color-scheme: dark)');
-    if (media) {
-      this.dark.set(media.matches);
-      const listener = (event: MediaQueryListEvent): void => this.dark.set(event.matches);
-      media.addEventListener('change', listener);
-      inject(DestroyRef).onDestroy(() => media.removeEventListener('change', listener));
-    }
-  }
 
   private readonly palette = computed(() => (this.dark() ? PALETTE.dark : PALETTE.light));
 

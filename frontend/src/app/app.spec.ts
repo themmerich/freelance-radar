@@ -9,10 +9,14 @@ const en = {
     label: 'Main navigation',
     menu: 'Show navigation',
     close: 'Hide navigation',
+    themeLight: 'Switch to light mode',
+    themeDark: 'Switch to dark mode',
     dashboard: 'Dashboard',
     profiles: 'Profiles',
   },
 };
+
+const THEME_STORAGE_KEY = 'freelance-radar.theme';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -34,6 +38,12 @@ describe('App', () => {
         MessageService,
       ],
     }).compileComponents();
+  });
+
+  afterEach(() => {
+    // ThemeStore schreibt echt auf <html> und localStorage — sonst leckt ein Test in den nächsten.
+    localStorage.removeItem(THEME_STORAGE_KEY);
+    document.documentElement.classList.remove('dark');
   });
 
   it('should create the app', () => {
@@ -106,5 +116,47 @@ describe('App', () => {
 
     const links = [...(fixture.nativeElement as HTMLElement).querySelectorAll('nav a')] as HTMLAnchorElement[];
     expect(links.map((link) => link.getAttribute('href'))).toEqual(['/', '/profil']);
+  });
+
+  it('shows the topbar with the theme button on every breakpoint, not just mobile', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    const themeButton = element.querySelector('[aria-label="Switch to dark mode"]');
+    const topbar = themeButton?.closest('.border-b');
+    // Anders als die mobile Menü-Gruppe darf die Topbar selbst kein `lg:hidden` tragen.
+    expect(themeButton).not.toBeNull();
+    expect(topbar?.className).not.toContain('lg:hidden');
+  });
+
+  it('toggles the dark class on <html> and flips the icon and label', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const button = () => element.querySelector('button[aria-label^="Switch to"]') as HTMLElement;
+
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
+    expect(button().querySelector('i')?.className).toContain('pi-moon');
+
+    button().click();
+    fixture.detectChanges();
+
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    expect(button().getAttribute('aria-label')).toBe('Switch to light mode');
+    expect(button().querySelector('i')?.className).toContain('pi-sun');
+  });
+
+  it('lets the theme button shrink the brand name instead of pushing itself off-screen', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    const menuButton = (fixture.nativeElement as HTMLElement).querySelector('[aria-controls="app-sidebar"]') as HTMLElement;
+    const brandName = menuButton.nextElementSibling as HTMLElement;
+    // Direkte Geschwister im selben Flex-Row, kein verschachteltes `flex`: ein zweiter
+    // Schrumpf-Container schrumpft in Chromium nicht zuverlässig unter seine Content-Breite.
+    expect(brandName.tagName).toBe('SPAN');
+    expect(brandName.className).toContain('min-w-0');
+    expect(brandName.className).toContain('truncate');
   });
 });
