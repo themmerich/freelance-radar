@@ -41,15 +41,3 @@ export type Offer = {
   status: OfferStatus;
   skills: OfferSkill[];
 };
-
-/** Protokoll eines Abruf-Laufs (`/api/runs`); Token-Felder werden ab Phase 2 befüllt. */
-export type Run = {
-  id: number;
-  ranAt: string;
-  newOffers: number;
-  totalSeen: number;
-  analyzedOffers: number;
-  inputTokens: number;
-  outputTokens: number;
-  note: string | null;
-};

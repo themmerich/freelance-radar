@@ -11,6 +11,7 @@ import de.prime_ux.backend.profile.ProfileNotFoundException;
 import de.prime_ux.backend.profile.ProfileRepository;
 import de.prime_ux.backend.run.Run;
 import de.prime_ux.backend.run.RunRepository;
+import de.prime_ux.backend.run.TokenTotals;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -31,6 +32,10 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class AnalysisService {
+
+	/** Konservative Defaults, solange noch kein Lauf mit Analysen protokolliert ist. */
+	private static final long FALLBACK_INPUT_TOKENS_PER_OFFER = 800;
+	private static final long FALLBACK_OUTPUT_TOKENS_PER_OFFER = 170;
 
 	private final OfferAnalyzer analyzer;
 	private final OfferRepository offers;
@@ -82,6 +87,17 @@ public class AnalysisService {
 	public int countCandidates(Long profileId, Integer days) {
 		profiles.findById(profileId).orElseThrow(() -> new ProfileNotFoundException(profileId));
 		return offers.findUnanalyzedPrimarySince(profileId, since(days)).size();
+	}
+
+	/** Kostenvorschau: Kandidaten × Ø-Tokens der bisherigen Läufe. */
+	public AnalysisPreview preview(Long profileId, Integer days) {
+		int candidates = countCandidates(profileId, days);
+		TokenTotals totals = runs.tokenTotals();
+		long inputPerOffer = totals.analyzedOffers() > 0 ? totals.inputTokens() / totals.analyzedOffers() : FALLBACK_INPUT_TOKENS_PER_OFFER;
+		long outputPerOffer = totals.analyzedOffers() > 0
+			? totals.outputTokens() / totals.analyzedOffers()
+			: FALLBACK_OUTPUT_TOKENS_PER_OFFER;
+		return new AnalysisPreview(candidates, candidates * inputPerOffer, candidates * outputPerOffer);
 	}
 
 	private Instant since(Integer days) {

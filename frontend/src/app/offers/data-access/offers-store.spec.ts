@@ -5,7 +5,8 @@ import { TestBed } from '@angular/core/testing';
 import { TranslocoTestingModule } from '@jsverse/transloco';
 import { MessageService, ToastMessageOptions } from 'primeng/api';
 
-import { Offer, Run } from '../domain/offer';
+import { Run } from '../../shared/domain/run';
+import { Offer } from '../domain/offer';
 import { OffersStore } from './offers-store';
 
 const en = {

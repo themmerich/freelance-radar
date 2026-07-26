@@ -4,9 +4,28 @@
  * in keiner Auswertung doppelt (wie in v1).
  */
 
+/**
+ * Feste Reihenfolge der Quellen. Einzige Quelle der Wahrheit: `countBySource`
+ * liefert die Zahlen in dieser Folge, Chart-Labels und Spaltenfilter müssen
+ * dieselbe benutzen — sonst zeigt das Doughnut-Chart Zahlen unter falschen Labels.
+ */
+export const SOURCE_TYPE_ORDER = ['AGENT', 'PRIVATE', 'NEWSLETTER', 'OTHER'] as const;
+
+export type SourceType = (typeof SOURCE_TYPE_ORDER)[number];
+
+/** Ampel-Stufe eines Match-Scores (🟢/🟡/🔴) — Tabelle und Histogramm teilen die Regel. */
+export type ScoreTier = 'good' | 'warning' | 'critical';
+
+export function scoreTier(score: number, greenThreshold: number, yellowThreshold: number): ScoreTier {
+  if (score >= greenThreshold) {
+    return 'good';
+  }
+  return score >= yellowThreshold ? 'warning' : 'critical';
+}
+
 type StatsOffer = {
   receivedAt: string;
-  sourceType: 'AGENT' | 'PRIVATE' | 'NEWSLETTER' | 'OTHER';
+  sourceType: SourceType;
   agentName: string | null;
   matchScore: number | null;
   skills: { name: string; gap: boolean }[];
@@ -49,8 +68,7 @@ export function offersPerDay(offers: StatsOffer[], days: number, today: Date): D
 
 /** Verteilung Agent/Privat/Newsletter/Sonstiges in fester Reihenfolge. */
 export function countBySource(offers: StatsOffer[]): number[] {
-  const order = ['AGENT', 'PRIVATE', 'NEWSLETTER', 'OTHER'] as const;
-  return order.map((source) => offers.filter((offer) => offer.sourceType === source).length);
+  return SOURCE_TYPE_ORDER.map((source) => offers.filter((offer) => offer.sourceType === source).length);
 }
 
 /** Trigger pro Suchagent, absteigend sortiert. */

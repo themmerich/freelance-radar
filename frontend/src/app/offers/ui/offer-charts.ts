@@ -2,7 +2,7 @@ import { Component, DestroyRef, computed, inject, input, signal } from '@angular
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { ChartModule } from 'primeng/chart';
 
-import { DailyCounts, NamedCount } from '../util/offer-stats';
+import { DailyCounts, NamedCount, SOURCE_TYPE_ORDER, scoreTier } from '../util/offer-stats';
 
 /**
  * Die 6 Auswertungs-Charts (an v1 orientiert). Farben aus einer validierten
@@ -103,7 +103,7 @@ export class OfferCharts {
   protected readonly sourceData = computed(() => {
     const palette = this.palette();
     return {
-      labels: ['AGENT', 'PRIVATE', 'NEWSLETTER', 'OTHER'].map((source) => this.transloco.translate(`offers.source.${source}`)),
+      labels: SOURCE_TYPE_ORDER.map((source) => this.transloco.translate(`offers.source.${source}`)),
       datasets: [
         {
           data: this.sources(),
@@ -132,13 +132,7 @@ export class OfferCharts {
   // Buckets tragen die Ampel-Semantik: Status-Farben nach der jeweiligen Schwelle.
   protected readonly histogramData = computed(() => {
     const palette = this.palette();
-    const colors = Array.from({ length: 10 }, (_, i) => {
-      const bucketStart = i * 10;
-      if (bucketStart >= this.greenThreshold()) {
-        return palette.good;
-      }
-      return bucketStart >= this.yellowThreshold() ? palette.warning : palette.critical;
-    });
+    const colors = Array.from({ length: 10 }, (_, i) => palette[scoreTier(i * 10, this.greenThreshold(), this.yellowThreshold())]);
     return {
       labels: Array.from({ length: 10 }, (_, i) => `${i * 10}–${i === 9 ? 100 : i * 10 + 9}`),
       datasets: [{ data: this.histogram(), backgroundColor: colors, borderRadius: 4 }],

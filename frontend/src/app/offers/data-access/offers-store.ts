@@ -4,7 +4,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoService } from '@jsverse/transloco';
 import { MessageService } from 'primeng/api';
 
-import { Offer, Run } from '../domain/offer';
+import { Run } from '../../shared/domain/run';
+import { Offer } from '../domain/offer';
 
 const OFFERS_URL = '/api/offers';
 const RUNS_URL = '/api/runs';
