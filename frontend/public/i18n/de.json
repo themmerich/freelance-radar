@@ -3,6 +3,8 @@
     "label": "Hauptnavigation",
     "menu": "Navigation einblenden",
     "close": "Navigation ausblenden",
+    "themeLight": "Zu hellem Modus wechseln",
+    "themeDark": "Zu dunklem Modus wechseln",
     "dashboard": "Dashboard",
     "profiles": "Profile"
   },

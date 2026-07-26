@@ -1,7 +1,9 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { ToastModule } from 'primeng/toast';
+
+import { ThemeStore } from './shared/data-access/theme-store';
 
 /**
  * Die Sidebar-Navigation. `exact` nur fürs Dashboard — ohne das wäre „/" auf jeder
@@ -19,6 +21,7 @@ const NAV_ITEMS = [
 })
 export class App {
   protected readonly navItems = NAV_ITEMS;
+  protected readonly theme = inject(ThemeStore);
 
   /**
    * Zustand der mobilen Schublade. Bewusst ein Signal statt `pStyleClass` wie im
@@ -34,5 +37,9 @@ export class App {
 
   protected closeMenu(): void {
     this.menuOpen.set(false);
+  }
+
+  protected toggleTheme(): void {
+    this.theme.setDark(!this.theme.dark());
   }
 }

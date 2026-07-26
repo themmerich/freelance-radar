@@ -46,14 +46,22 @@
       </div>
     </aside>
 
-    <div class="relative flex min-h-screen flex-auto flex-col">
-      <!-- Nur mobil: dort ist der Sidebar-Kopf verdeckt, also trägt die Topbar Knopf und Namen. -->
+    <!-- `min-w-0`: ohne das zieht die absichtlich breite, selbst scrollende Angebots-Tabelle
+         (`min-w-[80rem]`) die ganze Spalte samt Topbar auf ihre Breite — dann verschwindet der
+         Theme-Knopf rechts aus dem Bild, statt dass nur die Tabelle horizontal scrollt. -->
+    <div class="relative flex min-h-screen min-w-0 flex-auto flex-col">
+      <!-- Anders als im Template immer sichtbar, nicht nur mobil — Menü-Knopf und Name
+           bleiben aber mobil-only, weil die Sidebar deren Aufgabe auf Desktop schon übernimmt. -->
       <div
-        class="relative flex items-center gap-4 border-b border-surface-200 bg-surface-0 px-4 py-4 lg:hidden dark:border-surface-700 dark:bg-surface-900"
+        class="relative flex items-center gap-4 border-b border-surface-200 bg-surface-0 px-4 py-4 dark:border-surface-700 dark:bg-surface-900"
       >
+        <!-- `min-w-0` + `truncate` auf dem Namen: sonst schiebt ein zu enger Bildschirm den
+             Theme-Knopf rechts aus dem Bild statt den Markennamen zu kürzen. Kein verschachteltes
+             `flex` für die beiden: ein zweiter Schrumpf-Container schrumpft in Chromium nicht
+             zuverlässig unter seine Content-Breite, selbst mit `min-w-0` auf beiden Ebenen. -->
         <button
           type="button"
-          class="cursor-pointer text-surface-700 dark:text-surface-100"
+          class="shrink-0 cursor-pointer text-surface-700 lg:hidden dark:text-surface-100"
           aria-controls="app-sidebar"
           [attr.aria-label]="t('nav.menu')"
           [attr.aria-expanded]="menuOpen()"
@@ -61,7 +69,19 @@
         >
           <i class="pi pi-bars text-xl!"></i>
         </button>
-        <span class="font-semibold">📡 Freelance Radar</span>
+        <span class="min-w-0 truncate font-semibold lg:hidden">📡 Freelance Radar</span>
+
+        <!-- User/Notifications aus dem Template sind hier bewusst nicht nachgebaut — es gibt
+             weder Nutzerkonten noch Benachrichtigungen in dieser App. Icon-Knopf statt Switch,
+             wie auf primeng.dev — zeigt das Ziel des Klicks, nicht den aktuellen Zustand. -->
+        <button
+          type="button"
+          class="ml-auto shrink-0 cursor-pointer text-surface-500 dark:text-surface-400"
+          [attr.aria-label]="theme.dark() ? t('nav.themeLight') : t('nav.themeDark')"
+          (click)="toggleTheme()"
+        >
+          <i class="text-xl! leading-none!" [class]="theme.dark() ? 'pi pi-sun' : 'pi pi-moon'"></i>
+        </button>
       </div>
 
       <div class="flex flex-auto flex-col p-4 lg:p-8">

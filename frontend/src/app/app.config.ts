@@ -36,6 +36,9 @@ export const appConfig: ApplicationConfig = {
             name: 'primeng',
             order: 'theme, base, primeng, components, utilities',
           },
+          // Ohne das folgt PrimeNG allein der OS-Einstellung; der Switch in der
+          // Topbar (ThemeStore) toggelt dieselbe .dark-Klasse wie Tailwind.
+          darkModeSelector: '.dark',
         },
       },
     }),

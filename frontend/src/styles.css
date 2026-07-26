@@ -7,6 +7,11 @@
 @layer theme, base, primeng, components, utilities;
 
 @import 'tailwindcss';
+
+/* Ohne das folgt die `dark:`-Variante allein `prefers-color-scheme`; der Switch
+   in der Topbar (ThemeStore) toggelt dieselbe .dark-Klasse auf <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @import 'primeicons/primeicons.css';
 
 @plugin 'tailwindcss-primeui';

@@ -3,6 +3,8 @@
     "label": "Main navigation",
     "menu": "Show navigation",
     "close": "Hide navigation",
+    "themeLight": "Switch to light mode",
+    "themeDark": "Switch to dark mode",
     "dashboard": "Dashboard",
     "profiles": "Profiles"
   },
