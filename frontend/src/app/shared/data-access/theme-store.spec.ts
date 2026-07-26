@@ -4,9 +4,32 @@ import { ThemeStore } from './theme-store';
 
 const STORAGE_KEY = 'freelance-radar.theme';
 
+/**
+ * Node 22+ bringt ein eigenes `localStorage` mit, das ohne `--localstorage-file`
+ * kaputt ist — auf Node 26 (CI) verdeckt es jsdoms funktionierende Implementierung
+ * komplett, weil `window` hier `globalThis` ist. Frisch pro Test, damit keine Wahl
+ * in den nächsten Test durchsickert.
+ */
+function stubLocalStorage(): void {
+  const backing = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => backing.get(key) ?? null,
+    setItem: (key: string, value: string) => backing.set(key, value),
+    removeItem: (key: string) => backing.delete(key),
+    clear: () => backing.clear(),
+    key: (index: number) => [...backing.keys()][index] ?? null,
+    get length() {
+      return backing.size;
+    },
+  } satisfies Storage);
+}
+
 describe('ThemeStore', () => {
+  beforeEach(() => {
+    stubLocalStorage();
+  });
+
   afterEach(() => {
-    window.localStorage.removeItem(STORAGE_KEY);
     document.documentElement.classList.remove('dark');
     vi.unstubAllGlobals();
   });
