@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable } from 'rxjs';
 
 import { AnalysisPreview, Profile, ProfileDraft } from '../domain/profile';
-import { Run } from '../domain/run';
+import { Run } from '../../shared/domain/run';
 
 const PROFILES_URL = '/api/profiles';
 const ANALYSES_URL = '/api/analyses';

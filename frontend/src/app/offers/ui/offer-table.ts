@@ -5,11 +5,13 @@ import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 
+import { SOURCE_TYPE_ORDER, SourceType, scoreTier } from '../util/offer-stats';
+
 /** The shape `offer-table` needs to render — a presentational contract, domain-free. */
 export type OfferRow = {
   id: number;
   receivedAt: string;
-  sourceType: 'AGENT' | 'PRIVATE' | 'NEWSLETTER' | 'OTHER';
+  sourceType: SourceType;
   agentName: string | null;
   title: string | null;
   company: string | null;
@@ -36,7 +38,12 @@ const SOURCE_SEVERITY = {
   OTHER: 'secondary',
 } as const;
 
-const SOURCE_TYPES: OfferRow['sourceType'][] = ['AGENT', 'PRIVATE', 'NEWSLETTER', 'OTHER'];
+const TIER_SEVERITY = {
+  good: 'success',
+  warning: 'warn',
+  critical: 'danger',
+} as const;
+
 const REMOTE_MODES: NonNullable<OfferRow['remote']>[] = ['REMOTE', 'HYBRID', 'ONSITE'];
 const STATUSES: OfferRow['status'][] = ['NEW', 'ANALYZED', 'ERROR'];
 
@@ -368,7 +375,7 @@ export class OfferTable {
 
   protected readonly rowsPerPage = ROWS_PER_PAGE;
   protected readonly rowsPerPageOptions = ROWS_PER_PAGE_OPTIONS;
-  protected readonly sourceTypes = SOURCE_TYPES;
+  protected readonly sourceTypes = SOURCE_TYPE_ORDER;
   protected readonly remoteModes = REMOTE_MODES;
   protected readonly statuses = STATUSES;
 
@@ -391,11 +398,9 @@ export class OfferTable {
     return SOURCE_SEVERITY[sourceType];
   }
 
+  /** Ampel-Stufe → PrimeNG-Severity; die Schwellen-Regel selbst liegt in `offer-stats`. */
   protected scoreSeverity(score: number): 'success' | 'warn' | 'danger' {
-    if (score >= this.greenThreshold()) {
-      return 'success';
-    }
-    return score >= this.yellowThreshold() ? 'warn' : 'danger';
+    return TIER_SEVERITY[scoreTier(score, this.greenThreshold(), this.yellowThreshold())];
   }
 
   /** DE neutral, AT/CH als DACH-Nachbarn hervorgehoben, alles andere deutlich markiert. */

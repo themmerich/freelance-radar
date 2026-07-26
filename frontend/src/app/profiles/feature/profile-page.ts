@@ -11,6 +11,17 @@ import { AnalysisPreview, Profile, ProfileDraft, SKILL_CATEGORIES, draftOf, empt
 import { ChipList } from '../ui/chip-list';
 import { runCostCents } from '../../shared/util/run-cost';
 
+/** Freitext-Felder des Editors in Anzeigereihenfolge; der Feldname ist auch der i18n-Key. */
+const TEXT_FIELDS = ['name', 'role', 'focus', 'industries', 'region', 'languages'] as const;
+
+type TextField = (typeof TEXT_FIELDS)[number];
+
+/**
+ * Was der Editor gerade tut. Als ein Typ statt dreier Signale, weil „bearbeitet"
+ * und „Kopie" sich ausschließen — getrennt ließen sich beide zugleich setzen.
+ */
+type EditorMode = { kind: 'new' } | { kind: 'edit'; id: number; name: string } | { kind: 'copy'; source: string };
+
 @Component({
   selector: 'app-profile-page',
   imports: [DecimalPipe, TranslocoDirective, ButtonModule, CardModule, TagModule, ChipList],
@@ -84,60 +95,17 @@ import { runCostCents } from '../../shared/util/run-cost';
               </div>
 
               <div class="grid gap-4 sm:grid-cols-2">
-                <label class="flex flex-col gap-1 text-sm">
-                  <span class="font-medium">{{ t('profiles.editor.name') }}</span>
-                  <input
-                    type="text"
-                    class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
-                    [value]="draft().name"
-                    (input)="patch('name', $event)"
-                  />
-                </label>
-                <label class="flex flex-col gap-1 text-sm">
-                  <span class="font-medium">{{ t('profiles.editor.role') }}</span>
-                  <input
-                    type="text"
-                    class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
-                    [value]="draft().role ?? ''"
-                    (input)="patch('role', $event)"
-                  />
-                </label>
-                <label class="flex flex-col gap-1 text-sm">
-                  <span class="font-medium">{{ t('profiles.editor.focus') }}</span>
-                  <input
-                    type="text"
-                    class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
-                    [value]="draft().focus ?? ''"
-                    (input)="patch('focus', $event)"
-                  />
-                </label>
-                <label class="flex flex-col gap-1 text-sm">
-                  <span class="font-medium">{{ t('profiles.editor.industries') }}</span>
-                  <input
-                    type="text"
-                    class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
-                    [value]="draft().industries ?? ''"
-                    (input)="patch('industries', $event)"
-                  />
-                </label>
-                <label class="flex flex-col gap-1 text-sm">
-                  <span class="font-medium">{{ t('profiles.editor.region') }}</span>
-                  <input
-                    type="text"
-                    class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
-                    [value]="draft().region ?? ''"
-                    (input)="patch('region', $event)"
-                  />
-                </label>
-                <label class="flex flex-col gap-1 text-sm">
-                  <span class="font-medium">{{ t('profiles.editor.languages') }}</span>
-                  <input
-                    type="text"
-                    class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
-                    [value]="draft().languages ?? ''"
-                    (input)="patch('languages', $event)"
-                  />
-                </label>
+                @for (field of textFields; track field) {
+                  <label class="flex flex-col gap-1 text-sm">
+                    <span class="font-medium">{{ t('profiles.editor.' + field) }}</span>
+                    <input
+                      type="text"
+                      class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
+                      [value]="draft()[field] ?? ''"
+                      (input)="patch(field, $event)"
+                    />
+                  </label>
+                }
               </div>
 
               @for (category of skillCategories; track category) {
@@ -232,42 +200,50 @@ export class ProfilePage {
   protected readonly store = inject(ProfilesStore);
   protected readonly costCents = runCostCents;
   protected readonly skillCategories = SKILL_CATEGORIES;
+  protected readonly textFields = TEXT_FIELDS;
 
   private readonly destroyRef = inject(DestroyRef);
   private readonly transloco = inject(TranslocoService);
 
-  protected readonly selectedId = signal<number | null>(null);
+  /** Genau ein Signal für den Editor-Zustand — unmögliche Kombinationen sind so nicht darstellbar. */
+  private readonly mode = signal<EditorMode>({ kind: 'new' });
+
+  protected readonly selectedId = computed(() => {
+    const mode = this.mode();
+    return mode.kind === 'edit' ? mode.id : null;
+  });
+
   protected readonly draft = signal<ProfileDraft>(emptyDraft());
   protected readonly days = signal<number | null>(null);
   protected readonly preview = signal<AnalysisPreview | null>(null);
 
-  protected readonly selectedProfile = computed(() => this.store.profiles().find((profile) => profile.id === this.selectedId()) ?? null);
-
-  /** Editor-Modus: mit `selectedId` wird geändert, ohne angelegt (leer oder als Kopie). */
-  protected readonly isEditing = computed(() => this.selectedId() !== null);
+  /** Bearbeiten heißt überschreiben; in allen anderen Modi wird angelegt (leer oder als Kopie). */
+  protected readonly isEditing = computed(() => this.mode().kind === 'edit');
 
   /** Name der Vorlage, solange eine Kopie im Editor steht — sonst null. */
-  protected readonly copySource = signal<string | null>(null);
+  protected readonly copySource = computed(() => {
+    const mode = this.mode();
+    return mode.kind === 'copy' ? mode.source : null;
+  });
 
   /**
-   * Name des bearbeiteten Profils für die Kopfzeile. Bewusst nicht aus
-   * `selectedProfile()` gelesen: direkt nach dem Anlegen lädt die Liste noch,
-   * das Profil wäre dort kurz nicht zu finden und die Kopfzeile leer.
+   * Name des bearbeiteten Profils für die Kopfzeile. Bewusst nicht aus der
+   * Profilliste gelesen: direkt nach dem Anlegen lädt die Liste noch, das Profil
+   * wäre dort kurz nicht zu finden und die Kopfzeile leer.
    */
-  protected readonly editedName = signal<string | null>(null);
+  protected readonly editedName = computed(() => {
+    const mode = this.mode();
+    return mode.kind === 'edit' ? mode.name : null;
+  });
 
   protected select(profile: Profile): void {
-    this.selectedId.set(profile.id);
-    this.copySource.set(null);
-    this.editedName.set(profile.name);
+    this.mode.set({ kind: 'edit', id: profile.id, name: profile.name });
     this.draft.set(draftOf(profile));
     this.loadPreview();
   }
 
   protected startNew(): void {
-    this.selectedId.set(null);
-    this.copySource.set(null);
-    this.editedName.set(null);
+    this.mode.set({ kind: 'new' });
     this.draft.set(emptyDraft());
     this.preview.set(null);
   }
@@ -278,8 +254,7 @@ export class ProfilePage {
    * bis dahin lässt sich der Unterschied zum Original bearbeiten.
    */
   protected duplicate(profile: Profile): void {
-    this.selectedId.set(null);
-    this.copySource.set(profile.name);
+    this.mode.set({ kind: 'copy', source: profile.name });
     this.preview.set(null);
     this.draft.set({ ...draftOf(profile), name: this.freeCopyName(profile.name) });
   }
@@ -321,7 +296,7 @@ export class ProfilePage {
     this.loadPreview();
   }
 
-  protected patch(field: 'name' | 'role' | 'focus' | 'industries' | 'region' | 'languages', event: Event): void {
+  protected patch(field: TextField, event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.draft.set({ ...this.draft(), [field]: field === 'name' ? value : value || null });
   }
