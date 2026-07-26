@@ -1,6 +1,8 @@
 {
   "nav": {
     "label": "Main navigation",
+    "menu": "Show navigation",
+    "close": "Hide navigation",
     "dashboard": "Dashboard",
     "profiles": "Profiles"
   },

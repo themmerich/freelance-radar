@@ -19,7 +19,7 @@ const TOP_SKILL_LIMIT = 10;
   selector: 'app-offers-page',
   imports: [DatePipe, DecimalPipe, TranslocoDirective, ButtonModule, CardModule, ProgressSpinnerModule, KpiTiles, OfferCharts, OfferTable],
   template: `
-    <main class="mx-auto flex min-h-dvh max-w-7xl flex-col gap-6 p-6">
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <ng-container *transloco="let t">
         <p-card [header]="t('offers.title')">
           <div class="flex flex-col gap-6">

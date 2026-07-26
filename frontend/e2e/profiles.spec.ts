@@ -48,7 +48,7 @@ test.describe('Profiles page e2e', () => {
   test.beforeEach(async ({ page }) => {
     await mockApi(page);
     await page.goto('/');
-    await page.getByRole('tab', { name: 'Profiles' }).click();
+    await page.getByRole('link', { name: 'Profiles' }).click();
   });
 
   test('lists the profiles and opens one in the editor', async ({ page }) => {

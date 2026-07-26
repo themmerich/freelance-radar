@@ -1,6 +1,8 @@
 {
   "nav": {
     "label": "Hauptnavigation",
+    "menu": "Navigation einblenden",
+    "close": "Navigation ausblenden",
     "dashboard": "Dashboard",
     "profiles": "Profile"
   },
