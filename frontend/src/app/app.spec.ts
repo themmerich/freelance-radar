@@ -34,4 +34,16 @@ describe('App', () => {
     expect(compiled.textContent).toContain('Dashboard');
     expect(compiled.textContent).toContain('Profiles');
   });
+
+  it('marks the tab of the current route as selected', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    // Ohne Navigation steht die URL auf „/“ — also ist das Dashboard aktiv.
+    const tabs = [...(fixture.nativeElement as HTMLElement).querySelectorAll('[role="tab"]')];
+    const selected = tabs.filter((tab) => tab.getAttribute('aria-selected') === 'true');
+    expect(tabs).toHaveLength(2);
+    expect(selected).toHaveLength(1);
+    expect(selected[0].textContent?.trim()).toBe('Dashboard');
+  });
 });
