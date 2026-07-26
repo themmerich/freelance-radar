@@ -1,41 +1,38 @@
-import { Component, inject } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { Component, signal } from '@angular/core';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
-import { TabsModule } from 'primeng/tabs';
 import { ToastModule } from 'primeng/toast';
-import { filter, map } from 'rxjs';
 
-/** Die Hauptnavigation; der Routen-Pfad ist gleichzeitig der Wert der Karte. */
-const TABS = [
-  { route: '/', label: 'nav.dashboard' },
-  { route: '/profil', label: 'nav.profiles' },
+/**
+ * Die Sidebar-Navigation. `exact` nur fürs Dashboard — ohne das wäre „/" auf jeder
+ * Unterseite aktiv, weil jede Route mit „/" beginnt.
+ */
+const NAV_ITEMS = [
+  { route: '/', icon: 'pi pi-home', label: 'nav.dashboard', activeOptions: { exact: true } },
+  { route: '/profil', icon: 'pi pi-id-card', label: 'nav.profiles', activeOptions: { exact: false } },
 ] as const;
-
-/** URL → aktive Karte; was auf keine Unterseite zeigt, ist das Dashboard. */
-function activeRoute(url: string): string {
-  return TABS.find((tab) => tab.route !== '/' && url.startsWith(tab.route))?.route ?? '/';
-}
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, TranslocoDirective, TabsModule, ToastModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslocoDirective, ToastModule],
   templateUrl: './app.html',
 })
 export class App {
-  private readonly router = inject(Router);
-
-  protected readonly tabs = TABS;
+  protected readonly navItems = NAV_ITEMS;
 
   /**
-   * Die aktive Karte kommt aus der URL, nicht aus dem Klick — sonst zeigt sie nach
-   * „Zurück" oder bei Direkteinstieg auf die falsche Seite.
+   * Zustand der mobilen Schublade. Bewusst ein Signal statt `pStyleClass` wie im
+   * Template: die Direktive erkennt „zu" an `offsetParent === null`, was bei der
+   * `fixed` positionierten Sidebar immer zutrifft — sie würde nur öffnen, nie schließen.
+   * Auf Desktop ist die Sidebar über `lg:block` ohnehin immer sichtbar.
    */
-  protected readonly activeTab = toSignal(
-    this.router.events.pipe(
-      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-      map((event) => activeRoute(event.urlAfterRedirects)),
-    ),
-    { initialValue: activeRoute(this.router.url) },
-  );
+  protected readonly menuOpen = signal(false);
+
+  protected toggleMenu(): void {
+    this.menuOpen.update((open) => !open);
+  }
+
+  protected closeMenu(): void {
+    this.menuOpen.set(false);
+  }
 }

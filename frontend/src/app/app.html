@@ -1,18 +1,73 @@
 <ng-container *transloco="let t">
-  <header class="mx-auto flex w-full max-w-7xl items-center gap-8 px-6 pt-4">
-    <span class="font-semibold">📡 Freelance Radar</span>
-    <!-- nav bleibt als Landmark; die aktive Karte steuert p-tabs über den Routen-Pfad. -->
-    <nav [attr.aria-label]="t('nav.label')">
-      <!-- Ohne Navigatoren: zwei Karten laufen nie über, und PrimeNG spart sich den ResizeObserver. -->
-      <p-tabs [value]="activeTab()" [showNavigators]="false">
-        <p-tablist>
-          @for (tab of tabs; track tab.route) {
-            <p-tab [value]="tab.route" [routerLink]="tab.route">{{ t(tab.label) }}</p-tab>
-          }
-        </p-tablist>
-      </p-tabs>
-    </nav>
-  </header>
+  <div class="app-shell relative flex min-h-screen bg-surface-50 lg:static dark:bg-surface-950">
+    <!-- Mobil eine Schublade über dem Inhalt (`fixed`, damit sie auch nach dem Scrollen im Bild
+         aufklappt), auf Desktop eine feste Spalte — `sticky`, sonst endet das Grün bei langen
+         Seiten mitten im Bild. -->
+    <aside
+      id="app-sidebar"
+      class="fixed top-0 left-0 z-10 h-screen w-[280px] shrink-0 bg-primary select-none lg:sticky lg:block"
+      [class.hidden]="!menuOpen()"
+      [class.animate-fadeinleft]="menuOpen()"
+    >
+      <div class="flex h-full flex-col">
+        <div class="flex items-center gap-3 p-4 text-primary-contrast">
+          <span class="text-2xl leading-none">📡</span>
+          <span class="text-lg leading-tight font-semibold">Freelance Radar</span>
+          <!-- Die offene Schublade deckt den Menü-Knopf der Topbar ab, sie braucht ihr eigenes X. -->
+          <button
+            type="button"
+            class="ml-auto cursor-pointer text-primary-contrast lg:hidden"
+            [attr.aria-label]="t('nav.close')"
+            (click)="closeMenu()"
+          >
+            <i class="pi pi-times text-xl!"></i>
+          </button>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto p-2" [attr.aria-label]="t('nav.label')">
+          <ul class="m-0 flex list-none flex-col gap-1 p-0">
+            @for (item of navItems; track item.route) {
+              <li>
+                <a
+                  class="flex cursor-pointer items-center gap-2 rounded-lg p-3 text-primary-contrast transition-colors duration-150 hover:bg-primary-emphasis"
+                  [routerLink]="item.route"
+                  routerLinkActive="bg-primary-emphasis font-semibold"
+                  [routerLinkActiveOptions]="item.activeOptions"
+                  ariaCurrentWhenActive="page"
+                  (click)="closeMenu()"
+                >
+                  <i class="text-base! leading-none!" [class]="item.icon"></i>
+                  <span class="text-base leading-tight">{{ t(item.label) }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        </nav>
+      </div>
+    </aside>
+
+    <div class="relative flex min-h-screen flex-auto flex-col">
+      <!-- Nur mobil: dort ist der Sidebar-Kopf verdeckt, also trägt die Topbar Knopf und Namen. -->
+      <div
+        class="relative flex items-center gap-4 border-b border-surface-200 bg-surface-0 px-4 py-4 lg:hidden dark:border-surface-700 dark:bg-surface-900"
+      >
+        <button
+          type="button"
+          class="cursor-pointer text-surface-700 dark:text-surface-100"
+          aria-controls="app-sidebar"
+          [attr.aria-label]="t('nav.menu')"
+          [attr.aria-expanded]="menuOpen()"
+          (click)="toggleMenu()"
+        >
+          <i class="pi pi-bars text-xl!"></i>
+        </button>
+        <span class="font-semibold">📡 Freelance Radar</span>
+      </div>
+
+      <div class="flex flex-auto flex-col p-4 lg:p-8">
+        <router-outlet />
+      </div>
+    </div>
+  </div>
 </ng-container>
-<router-outlet />
 <p-toast position="top-right" />

@@ -26,7 +26,7 @@ type EditorMode = { kind: 'new' } | { kind: 'edit'; id: number; name: string } |
   selector: 'app-profile-page',
   imports: [DecimalPipe, TranslocoDirective, ButtonModule, CardModule, TagModule, ChipList],
   template: `
-    <main class="mx-auto flex min-h-dvh max-w-7xl flex-col gap-6 p-6">
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <ng-container *transloco="let t">
         <p-card [header]="t('profiles.title')">
           <div class="grid gap-8 lg:grid-cols-[20rem_1fr]">

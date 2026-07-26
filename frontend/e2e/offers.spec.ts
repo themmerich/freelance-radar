@@ -81,8 +81,7 @@ test.describe('Offers dashboard e2e', () => {
 
   // Self-test: the route loaded and the dashboard rendered its card.
   test('renders the dashboard (self-test)', async ({ page }) => {
-    // Die Navigation sind PrimeNG-Tabs, also role=tab statt link.
-    await expect(page.getByRole('tab', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Fetch & analyze mails' })).toBeVisible();
   });
 
