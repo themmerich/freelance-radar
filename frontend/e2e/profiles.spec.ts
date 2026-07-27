@@ -92,22 +92,29 @@ test.describe('Profiles page e2e', () => {
   });
 
   test('marks the editor mode as editing, new, or copy', async ({ page }) => {
+    // Das Formular lebt jetzt in einem Dialog — nur einer ist je Modus offen, davor schließen.
+    const dialog = page.getByRole('dialog');
+
     // Bearbeiten: Kopfzeile trägt den Profilnamen, Button speichert.
     await page.getByRole('button', { name: /^Standard/ }).click();
-    await expect(page.getByRole('heading', { name: 'Standard' })).toBeVisible();
-    await expect(page.getByText('Editing')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save' })).toBeVisible();
+    await expect(dialog.getByRole('heading', { name: 'Standard' })).toBeVisible();
+    await expect(dialog.getByText('Editing')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Save' })).toBeVisible();
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden();
 
     // Leeres Anlegen.
     await page.getByRole('button', { name: 'New profile' }).click();
-    await expect(page.getByRole('heading', { name: 'New profile' })).toBeVisible();
-    await expect(page.getByText('New', { exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Create' })).toBeVisible();
+    await expect(dialog.getByRole('heading', { name: 'New profile' })).toBeVisible();
+    await expect(dialog.getByText('New', { exact: true })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Create' })).toBeVisible();
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden();
 
     // Kopie: Kopfzeile nennt die Vorlage.
     await page.getByRole('button', { name: 'Copy profile Standard' }).click();
-    await expect(page.getByRole('heading', { name: 'Copy of Standard' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Create' })).toBeVisible();
+    await expect(dialog.getByRole('heading', { name: 'Copy of Standard' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Create' })).toBeVisible();
   });
 
   test('copies a profile as a template and saves it as a new one', async ({ page }) => {
@@ -157,11 +164,23 @@ test.describe('Profiles page e2e', () => {
 
   test('discards edits when cancel is clicked', async ({ page }) => {
     await page.getByRole('button', { name: /^Standard/ }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Focus').fill('Temporary edit');
 
-    await page.getByLabel('Focus').fill('Temporary edit');
-    await page.getByRole('button', { name: 'Cancel' }).click();
+    const putCalls: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().endsWith('/api/profiles/1') && request.method() === 'PUT') {
+        putCalls.push(request.url());
+      }
+    });
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
 
-    await expect(page.getByLabel('Focus')).toHaveValue('Agentic UI / AI Engineering');
+    // Cancel schließt den Dialog, ohne zu speichern — kein PUT, und beim erneuten Öffnen der alte Stand.
+    await expect(dialog).toBeHidden();
+    expect(putCalls).toHaveLength(0);
+
+    await page.getByRole('button', { name: /^Standard/ }).click();
+    await expect(dialog.getByLabel('Focus')).toHaveValue('Agentic UI / AI Engineering');
   });
 
   test('prompts to re-score offers after saving a profile change, and toasts the result', async ({ page }) => {
@@ -204,6 +223,10 @@ test.describe('Profiles page e2e', () => {
 
   test('creates a new profile with a skill chip', async ({ page }) => {
     await page.getByRole('button', { name: 'New profile' }).click();
+    // Dialog-Öffnen-Transition abwarten, sonst kann der PrimeNG-Fokus-Trap den
+    // gerade fokussierten Input beim Eintreffen des Enter-Keydowns wieder verdrängen.
+    await expect(page.getByRole('dialog')).toBeVisible();
+
     await page.getByLabel('Name').fill('Fullstack');
     await page.getByLabel('Frontend', { exact: true }).fill('Angular');
     await page.getByLabel('Frontend', { exact: true }).press('Enter');
