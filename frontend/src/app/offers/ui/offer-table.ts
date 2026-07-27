@@ -47,7 +47,7 @@ const TIER_SEVERITY = {
 const REMOTE_MODES: NonNullable<OfferRow['remote']>[] = ['REMOTE', 'HYBRID', 'ONSITE'];
 const STATUSES: OfferRow['status'][] = ['NEW', 'ANALYZED', 'ERROR'];
 
-const ROWS_PER_PAGE = 25;
+const ROWS_PER_PAGE = 10;
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
 @Component({

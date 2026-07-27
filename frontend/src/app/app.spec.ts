@@ -14,6 +14,7 @@ const en = {
     themeLight: 'Switch to light mode',
     themeDark: 'Switch to dark mode',
     dashboard: 'Dashboard',
+    offers: 'Offers',
     profiles: 'Profiles',
   },
   offers: {
@@ -60,6 +61,7 @@ describe('App', () => {
       providers: [
         provideRouter([
           { path: '', children: [] },
+          { path: 'angebote', children: [] },
           { path: 'profil', children: [] },
         ]),
         provideHttpClient(),
@@ -97,6 +99,7 @@ describe('App', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('router-outlet')).toBeTruthy();
     expect(compiled.textContent).toContain('Dashboard');
+    expect(compiled.textContent).toContain('Offers');
     expect(compiled.textContent).toContain('Profiles');
   });
 
@@ -113,7 +116,7 @@ describe('App', () => {
     // Genau eine Markierung: „/“ ist `exact`, sonst wäre das Dashboard hier mit aktiv.
     const links = [...(fixture.nativeElement as HTMLElement).querySelectorAll('nav a')];
     const current = links.filter((link) => link.getAttribute('aria-current') === 'page');
-    expect(links).toHaveLength(2);
+    expect(links).toHaveLength(3);
     expect(current).toHaveLength(1);
     expect(current[0].textContent?.trim()).toBe('Profiles');
   });
@@ -159,7 +162,7 @@ describe('App', () => {
     fixture.detectChanges();
 
     const links = [...(fixture.nativeElement as HTMLElement).querySelectorAll('nav a')] as HTMLAnchorElement[];
-    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/', '/profil']);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/', '/angebote', '/profil']);
   });
 
   it('shows the topbar with the theme button on every breakpoint, not just mobile', () => {
