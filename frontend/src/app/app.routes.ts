@@ -14,4 +14,9 @@ export const routes: Routes = [
     path: 'profil',
     loadChildren: () => import('./profiles/shell/profiles-routes').then((m) => m.profilesRoutes),
   },
+  // Kostenübersicht: geschätzte Kosten je Lauf, Gesamt- und 7-Tage-Summe. Sheriff scope `costs`.
+  {
+    path: 'kosten',
+    loadChildren: () => import('./costs/shell/costs-routes').then((m) => m.costsRoutes),
+  },
 ];

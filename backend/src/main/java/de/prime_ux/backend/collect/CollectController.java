@@ -3,6 +3,7 @@ package de.prime_ux.backend.collect;
 import de.prime_ux.backend.run.RunRepository;
 import de.prime_ux.backend.run.RunResponse;
 import java.net.URI;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,5 +35,11 @@ public class CollectController {
 			.findTopByOrderByRanAtDesc()
 			.map(run -> ResponseEntity.ok(RunResponse.from(run)))
 			.orElseGet(() -> ResponseEntity.noContent().build());
+	}
+
+	/** Für die Kostenübersicht: alle Läufe, neueste zuerst. */
+	@GetMapping
+	public List<RunResponse> all() {
+		return runs.findAllByOrderByRanAtDesc().stream().map(RunResponse::from).toList();
 	}
 }

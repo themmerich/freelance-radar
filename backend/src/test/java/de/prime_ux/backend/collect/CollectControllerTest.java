@@ -276,4 +276,30 @@ class CollectControllerTest {
 			.andExpect(jsonPath("$.newOffers").value(0))
 			.andExpect(jsonPath("$.ranAt").isNotEmpty());
 	}
+
+	@Test
+	void listsAllRunsNewestFirst() throws Exception {
+		mockMvc.perform(get("/api/runs")).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(0)));
+
+		MAILS.add(
+			new FetchedMail(
+				"<offer-1@freelancermap.de>",
+				"office@freelancermap.de",
+				"Angular - Anzahl neue Projekte: 1",
+				Instant.parse("2026-07-23T06:35:00Z"),
+				agentMailBody(projectBlock("Senior Angular Entwickler (m/w/d)", 3026991L))
+			)
+		);
+		// Erster Lauf analysiert das eine Angebot (1200/300 Tokens laut Stub-Analyzer), der
+		// zweite findet keine neue Mail mehr und analysiert nichts (0 Tokens).
+		mockMvc.perform(post("/api/runs")).andExpect(status().isCreated());
+		mockMvc.perform(post("/api/runs")).andExpect(status().isCreated());
+
+		mockMvc
+			.perform(get("/api/runs"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$", hasSize(2)))
+			.andExpect(jsonPath("$[0].inputTokens").value(0))
+			.andExpect(jsonPath("$[1].inputTokens").value(1200));
+	}
 }
