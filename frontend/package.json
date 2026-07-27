@@ -9,6 +9,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "e2e": "playwright test",
+    "screenshots": "node scripts/screenshots.mjs",
     "serve:dist": "serve --single --listen 4200 dist/frontend/browser",
     "lint": "ng lint",
     "format": "prettier --write .",
