@@ -1,4 +1,14 @@
-import { countBySource, kpis, offersPerDay, scoreHistogram, topSkills, triggersPerAgent } from './offer-stats';
+import {
+  averageScorePerAgent,
+  averageScorePerDay,
+  countByRemote,
+  countBySource,
+  kpis,
+  offersPerDay,
+  scoreHistogram,
+  topSkills,
+  triggersPerAgent,
+} from './offer-stats';
 
 type StatsOffer = Parameters<typeof countBySource>[0][number];
 
@@ -9,6 +19,7 @@ function offer(overrides: Partial<StatsOffer>): StatsOffer {
     receivedAt: '2026-07-23T09:00:00Z',
     sourceType: 'AGENT',
     agentName: 'Angular',
+    remote: null,
     matchScore: null,
     skills: [],
     ...overrides,
@@ -36,6 +47,49 @@ describe('offer-stats', () => {
     ]);
 
     expect(result).toEqual([2, 1, 0, 1]);
+  });
+
+  it('counts remote levels in the fixed order remote, hybrid, onsite plus unknown', () => {
+    const result = countByRemote([
+      offer({ remote: 'REMOTE' }),
+      offer({ remote: 'ONSITE' }),
+      offer({ remote: 'REMOTE' }),
+      offer({ remote: null }),
+    ]);
+
+    expect(result).toEqual([2, 0, 1, 1]);
+  });
+
+  it('averages scores per day and leaves days without analyzed offers null', () => {
+    const result = averageScorePerDay(
+      [
+        offer({ matchScore: 70 }),
+        offer({ matchScore: 75 }),
+        offer({ matchScore: null }),
+        offer({ receivedAt: '2026-07-21T08:00:00', matchScore: 40 }),
+        offer({ receivedAt: '2026-06-01T00:00:00', matchScore: 100 }),
+      ],
+      3,
+      TODAY,
+    );
+
+    expect(result.labels).toEqual(['21.07.', '22.07.', '23.07.']);
+    expect(result.averages).toEqual([40, null, 73]);
+  });
+
+  it('averages scores per agent descending and skips unanalyzed or non-agent offers', () => {
+    const result = averageScorePerAgent([
+      offer({ agentName: 'AI', matchScore: 30 }),
+      offer({ agentName: 'AI', matchScore: 41 }),
+      offer({ agentName: 'Angular', matchScore: 80 }),
+      offer({ agentName: 'Angular', matchScore: null }),
+      offer({ sourceType: 'PRIVATE', agentName: 'Java', matchScore: 90 }),
+    ]);
+
+    expect(result).toEqual([
+      { name: 'Angular', averageScore: 80 },
+      { name: 'AI', averageScore: 36 },
+    ]);
   });
 
   it('ranks agent triggers descending and ignores non-agent offers', () => {

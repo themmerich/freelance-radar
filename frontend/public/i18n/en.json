@@ -109,8 +109,12 @@
     },
     "charts": {
       "perDay": "Offers per day (30 days)",
-      "sources": "Agent vs. private",
+      "scoreTrend": "Avg match score per day (30 days)",
+      "sources": "Distribution by source",
+      "remote": "Remote share",
+      "remoteUnknown": "Unknown",
       "agents": "Triggers per agent",
+      "agentScores": "Avg match score per agent",
       "topSkills": "Top requested skills",
       "topGaps": "Top skill gaps",
       "scores": "Match score distribution"

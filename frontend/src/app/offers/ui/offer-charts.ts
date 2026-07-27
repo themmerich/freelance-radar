@@ -2,10 +2,10 @@ import { Component, computed, inject, input } from '@angular/core';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { ChartModule } from 'primeng/chart';
 
-import { DailyCounts, NamedCount, SOURCE_TYPE_ORDER, scoreTier } from '../util/offer-stats';
+import { AgentScore, DailyAverages, DailyCounts, NamedCount, REMOTE_ORDER, SOURCE_TYPE_ORDER, scoreTier } from '../util/offer-stats';
 
 /**
- * Die 6 Auswertungs-Charts (an v1 orientiert). Farben aus einer validierten
+ * Die 9 Auswertungs-Charts (Kern an v1 orientiert). Farben aus einer validierten
  * Dataviz-Palette, jeweils für helle und dunkle Oberfläche gestuft; das
  * Histogramm nutzt die Status-Farben der Score-Ampel.
  */
@@ -47,12 +47,24 @@ const PALETTE = {
           <p-chart type="bar" [data]="perDayData()" [options]="barOptions()" height="16rem" />
         </figure>
         <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
+          <figcaption class="text-sm font-medium">{{ t('offers.charts.scoreTrend') }}</figcaption>
+          <p-chart type="line" [data]="scoreTrendData()" [options]="scoreTrendOptions()" height="16rem" />
+        </figure>
+        <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
           <figcaption class="text-sm font-medium">{{ t('offers.charts.sources') }}</figcaption>
           <p-chart type="doughnut" [data]="sourceData()" [options]="doughnutOptions()" height="16rem" />
         </figure>
         <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
+          <figcaption class="text-sm font-medium">{{ t('offers.charts.remote') }}</figcaption>
+          <p-chart type="doughnut" [data]="remoteData()" [options]="doughnutOptions()" height="16rem" />
+        </figure>
+        <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
           <figcaption class="text-sm font-medium">{{ t('offers.charts.agents') }}</figcaption>
           <p-chart type="bar" [data]="agentData()" [options]="barOptions()" height="16rem" />
+        </figure>
+        <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
+          <figcaption class="text-sm font-medium">{{ t('offers.charts.agentScores') }}</figcaption>
+          <p-chart type="bar" [data]="agentScoreData()" [options]="agentScoreOptions()" height="16rem" />
         </figure>
         <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
           <figcaption class="text-sm font-medium">{{ t('offers.charts.topSkills') }}</figcaption>
@@ -72,8 +84,12 @@ const PALETTE = {
 })
 export class OfferCharts {
   readonly perDay = input.required<DailyCounts>();
+  readonly scoreTrend = input.required<DailyAverages>();
   readonly sources = input.required<number[]>();
+  /** Zählung in `REMOTE_ORDER` plus letztem Eintrag für „nicht erkannt“. */
+  readonly remote = input.required<number[]>();
   readonly agents = input.required<NamedCount[]>();
+  readonly agentScores = input.required<AgentScore[]>();
   readonly skills = input.required<NamedCount[]>();
   readonly gaps = input.required<NamedCount[]>();
   readonly histogram = input.required<number[]>();
@@ -105,9 +121,49 @@ export class OfferCharts {
     };
   });
 
+  protected readonly scoreTrendData = computed(() => {
+    const palette = this.palette();
+    return {
+      labels: this.scoreTrend().labels,
+      datasets: [
+        {
+          data: this.scoreTrend().averages,
+          borderColor: palette.series1,
+          backgroundColor: palette.series1,
+          pointRadius: 3,
+          tension: 0.3,
+          // Tage ohne analysierte Angebote sind null — die Linie überbrückt sie statt abzureißen.
+          spanGaps: true,
+        },
+      ],
+    };
+  });
+
+  protected readonly remoteData = computed(() => {
+    const palette = this.palette();
+    return {
+      labels: [
+        ...REMOTE_ORDER.map((remote) => this.transloco.translate(`offers.remote.${remote}`)),
+        this.transloco.translate('offers.charts.remoteUnknown'),
+      ],
+      datasets: [
+        {
+          data: this.remote(),
+          backgroundColor: [palette.series1, palette.series2, palette.series3, palette.muted],
+          borderWidth: 0,
+        },
+      ],
+    };
+  });
+
   protected readonly agentData = computed(() => ({
     labels: this.agents().map((agent) => agent.name),
     datasets: [{ data: this.agents().map((agent) => agent.count), backgroundColor: this.palette().series1, borderRadius: 4 }],
+  }));
+
+  protected readonly agentScoreData = computed(() => ({
+    labels: this.agentScores().map((agent) => agent.name),
+    datasets: [{ data: this.agentScores().map((agent) => agent.averageScore), backgroundColor: this.palette().series3, borderRadius: 4 }],
   }));
 
   protected readonly skillData = computed(() => ({
@@ -132,21 +188,27 @@ export class OfferCharts {
 
   protected readonly barOptions = computed(() => this.axisOptions('x'));
   protected readonly horizontalBarOptions = computed(() => this.axisOptions('y'));
+  // Score-Charts bekommen eine feste 0–100-Werteachse, damit Balken/Linie nicht relativ überzeichnen.
+  protected readonly agentScoreOptions = computed(() => this.axisOptions('y', 100));
+  protected readonly scoreTrendOptions = computed(() => this.axisOptions('x', 100));
 
   protected readonly doughnutOptions = computed(() => ({
     maintainAspectRatio: false,
     plugins: { legend: { position: 'bottom', labels: { color: this.palette().ink } } },
   }));
 
-  private axisOptions(indexAxis: 'x' | 'y'): object {
+  /** `valueMax` fixiert die Werteachse (die zur `indexAxis` orthogonale) auf 0–`valueMax`. */
+  private axisOptions(indexAxis: 'x' | 'y', valueMax?: number): object {
     const palette = this.palette();
+    const axis = { ticks: { color: palette.muted, precision: 0 }, grid: { color: palette.grid } };
+    const valueBounds = valueMax === undefined ? {} : { min: 0, max: valueMax };
     return {
       indexAxis,
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: palette.muted, precision: 0 }, grid: { color: palette.grid } },
-        y: { ticks: { color: palette.muted, precision: 0 }, grid: { color: palette.grid } },
+        x: { ...axis, ...(indexAxis === 'y' ? valueBounds : {}) },
+        y: { ...axis, ...(indexAxis === 'x' ? valueBounds : {}) },
       },
     };
   }
