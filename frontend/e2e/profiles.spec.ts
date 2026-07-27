@@ -42,6 +42,11 @@ async function mockApi(page: Page): Promise<void> {
     route.fulfill({ json: { candidates: 5, estimatedInputTokens: 4000, estimatedOutputTokens: 850 } }),
   );
   await page.route('**/api/analyses', (route) => route.fulfill({ status: 201, json: REANALYSIS_RUN }));
+  // Die App-Shell (Glocke, Profil-Umschalter) hängt global an OffersStore und läuft auf
+  // JEDER Seite mit — ohne Mock landen diese Requests auf dem SPA-Fallback (Produktions-
+  // Build) statt auf JSON, httpResource wirft dann beim Lesen und reißt die ganze Seite mit.
+  await page.route('**/api/offers', (route) => route.fulfill({ json: [] }));
+  await page.route('**/api/runs/latest', (route) => route.fulfill({ status: 204 }));
 }
 
 test.describe('Profiles page e2e', () => {

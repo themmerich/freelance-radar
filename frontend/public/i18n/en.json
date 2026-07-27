@@ -61,6 +61,7 @@
     "listTitle": "Offers",
     "profile": "Profile",
     "collect": "Fetch & analyze mails",
+    "messagesTitle": "Messages",
     "lastRun": "Last run: {{newOffers}} new of {{totalSeen}} seen",
     "lastRunAnalyzed": "{{analyzed}} analyzed",
     "noRunYet": "No run yet — fetch mails now.",

@@ -1,6 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
+import { ButtonModule } from 'primeng/button';
+import { PopoverModule } from 'primeng/popover';
 import { ToastModule } from 'primeng/toast';
 
 import { OffersStore } from './offers/data-access/offers-store';
@@ -18,7 +20,7 @@ const NAV_ITEMS = [
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslocoDirective, ToastModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslocoDirective, ButtonModule, PopoverModule, ToastModule],
   templateUrl: './app.html',
 })
 export class App {
@@ -32,6 +34,15 @@ export class App {
   protected onProfileChange(event: Event): void {
     this.offers.switchProfile(Number((event.target as HTMLSelectElement).value));
   }
+
+  /** Sidebar-Button „Mails abrufen": auf Mobil schließt er zusätzlich die Schublade. */
+  protected collect(): void {
+    this.offers.collect();
+    this.closeMenu();
+  }
+
+  /** Nur für `aria-expanded` am Glocken-Knopf — der Popover selbst hält seinen Zustand privat. */
+  protected readonly messagesOpen = signal(false);
 
   /**
    * Zustand der mobilen Schublade. Bewusst ein Signal statt `pStyleClass` wie im

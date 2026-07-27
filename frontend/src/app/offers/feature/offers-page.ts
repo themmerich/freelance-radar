@@ -1,7 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { TranslocoDirective } from '@jsverse/transloco';
-import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
@@ -17,33 +16,23 @@ const TOP_SKILL_LIMIT = 10;
 
 @Component({
   selector: 'app-offers-page',
-  imports: [DatePipe, DecimalPipe, TranslocoDirective, ButtonModule, CardModule, ProgressSpinnerModule, KpiTiles, OfferCharts],
+  imports: [DatePipe, DecimalPipe, TranslocoDirective, CardModule, ProgressSpinnerModule, KpiTiles, OfferCharts],
   template: `
     <main class="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <ng-container *transloco="let t">
         <p-card>
           <div class="flex flex-col gap-6">
-            <div class="flex flex-wrap items-center gap-4">
-              <p-button
-                type="button"
-                icon="pi pi-inbox"
-                [label]="t('offers.collect')"
-                [loading]="store.isCollecting()"
-                (onClick)="store.collect()"
-              />
-              @if (store.latestRun(); as run) {
-                <span class="text-sm text-surface-600 dark:text-surface-300">
-                  {{ t('offers.lastRun', { newOffers: run.newOffers, totalSeen: run.totalSeen }) }}
-                  · {{ t('offers.lastRunAnalyzed', { analyzed: run.analyzedOffers }) }}
-                  @if (run.inputTokens > 0) {
-                    · ≈{{ costCents(run.inputTokens, run.outputTokens) | number: '1.1-2' }} ct
-                  }
-                  ({{ run.ranAt | date: 'dd.MM.yyyy HH:mm' }})
-                </span>
-              } @else {
-                <span class="text-sm text-surface-600 dark:text-surface-300">{{ t('offers.noRunYet') }}</span>
-              }
-            </div>
+            <!-- „Last run: neu von gesehen" sitzt jetzt hinter der Glocke in der Topbar; diese
+                 Zeile bleibt vorerst hier — folgt als eigener Schritt. -->
+            @if (store.latestRun(); as run) {
+              <span class="text-sm text-surface-600 dark:text-surface-300">
+                {{ t('offers.lastRunAnalyzed', { analyzed: run.analyzedOffers }) }}
+                @if (run.inputTokens > 0) {
+                  · ≈{{ costCents(run.inputTokens, run.outputTokens) | number: '1.1-2' }} ct
+                }
+                ({{ run.ranAt | date: 'dd.MM.yyyy HH:mm' }})
+              </span>
+            }
 
             @if (store.isLoading()) {
               <p-progress-spinner [style]="{ width: '2rem', height: '2rem' }" [ariaLabel]="t('offers.title')" />

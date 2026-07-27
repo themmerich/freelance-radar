@@ -19,6 +19,10 @@ const en = {
   },
   offers: {
     profile: 'Profile',
+    collect: 'Fetch & analyze mails',
+    messagesTitle: 'Messages',
+    lastRun: 'Last run: {{newOffers}} new of {{totalSeen}} seen',
+    noRunYet: 'No run yet — fetch mails now.',
   },
 };
 
@@ -157,6 +161,30 @@ describe('App', () => {
     expect(sidebar.classList.contains('hidden')).toBe(true);
   });
 
+  it('pins the collect button to the bottom of the sidebar and posts a run', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const sidebar = element.querySelector('#app-sidebar') as HTMLElement;
+
+    // `nav` trägt `flex-1`; nur wenn der Button ein Geschwister DANACH ist, sitzt
+    // er unten statt mittendrin.
+    const sidebarColumn = sidebar.querySelector(':scope > div') as HTMLElement;
+    expect(sidebarColumn.lastElementChild?.textContent).toContain('Fetch & analyze mails');
+
+    (element.querySelector('[aria-label="Show navigation"]') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(sidebar.classList.contains('hidden')).toBe(false);
+
+    const collectButton = [...element.querySelectorAll('button')].find((button) => button.textContent?.includes('Fetch & analyze mails'));
+    collectButton?.click();
+    fixture.detectChanges();
+
+    TestBed.inject(HttpTestingController).expectOne((req) => req.method === 'POST' && req.url === '/api/runs');
+    // Sonst bliebe die Schublade nach dem Klick über dem Inhalt liegen.
+    expect(sidebar.classList.contains('hidden')).toBe(true);
+  });
+
   it('keeps the navigation as real links with an href', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
@@ -207,5 +235,24 @@ describe('App', () => {
     expect(brandName.previousElementSibling?.tagName).toBe('svg');
     expect(brandName.className).toContain('min-w-0');
     expect(brandName.className).toContain('truncate');
+  });
+
+  it('opens the messages popover and shows the last run text', async () => {
+    const fixture = TestBed.createComponent(App);
+    flushOffersRequests();
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const bell = element.querySelector('[aria-label="Messages"]') as HTMLElement;
+
+    expect(bell.getAttribute('aria-expanded')).toBe('false');
+
+    bell.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // Der Popover hängt per `appendTo="body"` außerhalb von `fixture.nativeElement`.
+    expect(bell.getAttribute('aria-expanded')).toBe('true');
+    expect(document.body.textContent).toContain('No run yet — fetch mails now.');
   });
 });

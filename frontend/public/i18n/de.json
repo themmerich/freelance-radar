@@ -61,6 +61,7 @@
     "listTitle": "Angebote",
     "profile": "Profil",
     "collect": "Mails abrufen & analysieren",
+    "messagesTitle": "Nachrichten",
     "lastRun": "Letzter Lauf: {{newOffers}} neu von {{totalSeen}} gesehen",
     "lastRunAnalyzed": "{{analyzed}} analysiert",
     "noRunYet": "Noch kein Lauf — jetzt Mails abrufen.",

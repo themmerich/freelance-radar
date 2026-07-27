@@ -51,6 +51,19 @@
             }
           </ul>
         </nav>
+
+        <!-- Ganz unten, außerhalb von `nav`: `nav` trägt `flex-1` und würde den Button sonst
+             mit nach oben ziehen, statt ihn an den unteren Rand zu pinnen. -->
+        <div class="p-2">
+          <p-button
+            type="button"
+            icon="pi pi-inbox"
+            styleClass="w-full"
+            [label]="t('offers.collect')"
+            [loading]="offers.isCollecting()"
+            (onClick)="collect()"
+          />
+        </div>
       </div>
     </aside>
 
@@ -105,12 +118,44 @@
           </label>
         }
 
-        <!-- User/Notifications aus dem Template sind hier bewusst nicht nachgebaut — es gibt
-             weder Nutzerkonten noch Benachrichtigungen in dieser App. Icon-Knopf statt Switch,
-             wie auf primeng.dev — zeigt das Ziel des Klicks, nicht den aktuellen Zustand. -->
+        <!-- User-Konto aus dem Template ist hier bewusst nicht nachgebaut — es gibt keine
+             Nutzerkonten in dieser App. Die Glocke zeigt den letzten Lauf; die Kosten-Meldung
+             bleibt vorerst über dem Dashboard (folgt als eigener Schritt). -->
         <button
           type="button"
           class="ml-auto shrink-0 cursor-pointer text-surface-500 dark:text-surface-400"
+          aria-haspopup="dialog"
+          [attr.aria-expanded]="messagesOpen()"
+          [attr.aria-label]="t('offers.messagesTitle')"
+          (click)="messagesPanel.toggle($event)"
+        >
+          <i class="pi pi-bell text-xl! leading-none!"></i>
+        </button>
+        <p-popover
+          #messagesPanel
+          [ariaLabel]="t('offers.messagesTitle')"
+          (onShow)="messagesOpen.set(true)"
+          (onHide)="messagesOpen.set(false)"
+        >
+          <div class="flex min-w-56 flex-col gap-2 p-2">
+            <h3 class="text-sm font-semibold">{{ t('offers.messagesTitle') }}</h3>
+            <ul class="m-0 flex list-none flex-col gap-1 p-0 text-sm text-surface-600 dark:text-surface-300">
+              <li>
+                @if (offers.latestRun(); as run) {
+                  {{ t('offers.lastRun', { newOffers: run.newOffers, totalSeen: run.totalSeen }) }}
+                } @else {
+                  {{ t('offers.noRunYet') }}
+                }
+              </li>
+            </ul>
+          </div>
+        </p-popover>
+
+        <!-- Icon-Knopf statt Switch, wie auf primeng.dev — zeigt das Ziel des Klicks, nicht den
+             aktuellen Zustand. -->
+        <button
+          type="button"
+          class="shrink-0 cursor-pointer text-surface-500 dark:text-surface-400"
           [attr.aria-label]="theme.dark() ? t('nav.themeLight') : t('nav.themeDark')"
           (click)="toggleTheme()"
         >
