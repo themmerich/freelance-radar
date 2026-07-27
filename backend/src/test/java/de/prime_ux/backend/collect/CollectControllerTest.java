@@ -159,7 +159,7 @@ class CollectControllerTest {
 			.andExpect(jsonPath("$[0].status").value("ANALYZED"))
 			.andExpect(jsonPath("$[0].country").value("AT"))
 			.andExpect(jsonPath("$[0].matchScore").value(85))
-			.andExpect(jsonPath("$[0].matchReason").value("Passt gut zum Profil (Standard)."))
+			.andExpect(jsonPath("$[0].matchReason").value("Passt gut zum Profil (Frontend Architect & Angular Lead)."))
 			.andExpect(jsonPath("$[0].skills", hasSize(2)))
 			.andExpect(jsonPath("$[0].skills[?(@.name=='Kotlin')].gap", contains(true)));
 
@@ -259,7 +259,7 @@ class CollectControllerTest {
 		mockMvc
 			.perform(get("/api/offers"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[0].matchReason").value("Passt gut zum Profil (Standard)."));
+			.andExpect(jsonPath("$[0].matchReason").value("Passt gut zum Profil (Frontend Architect & Angular Lead)."));
 
 		mockMvc.perform(delete("/api/profiles/{id}", fullstackId)).andExpect(status().isNoContent());
 	}
