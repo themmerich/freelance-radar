@@ -27,8 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Analysiert Angebote gegen ein Profil: nur primäre Einträge ohne Ergebnis für
  * genau dieses Profil (Kopien anderer Agenten kosten nie Tokens), gedeckelt auf
- * radar.analysis.max-offers-per-run. Ergebnis und Token-Verbrauch landen am Run;
- * Ergebnisse anderer Profile bleiben unberührt nebeneinander bestehen.
+ * radar.analysis.max-offers-per-run pro Profil. Ergebnis und Token-Verbrauch landen
+ * am Run; Ergebnisse anderer Profile bleiben unberührt nebeneinander bestehen. Ein
+ * Abruf-Lauf analysiert automatisch gegen alle Profile, nicht nur das aktive.
  */
 @Service
 public class AnalysisService {
@@ -63,15 +64,28 @@ public class AnalysisService {
 		this.properties = properties;
 	}
 
-	/** Nach einem Abruf-Lauf: neue Angebote gegen das aktive Profil bewerten. */
+	/**
+	 * Nach einem Abruf-Lauf: neue Angebote gegen alle Profile bewerten, nicht nur das
+	 * aktive — sonst bleibt die Ansicht der anderen Profile leer, bis jemand händisch
+	 * nachanalysiert. Jedes Profil zählt einzeln gegen den Kostendeckel.
+	 */
 	@Transactional
 	public void analyzeNewOffers(Run run) {
-		Profile active = profiles.findByActiveTrue().orElse(null);
-		if (active == null) {
-			run.setNote(run.getNote() + "; kein aktives profil");
-			return;
+		int analyzed = 0;
+		long inputTokens = 0;
+		long outputTokens = 0;
+		for (Profile profile : profiles.findAll()) {
+			AnalysisOutcome outcome = analyze(profile, Instant.EPOCH);
+			analyzed += outcome.analyzed();
+			inputTokens += outcome.inputTokens();
+			outputTokens += outcome.outputTokens();
+			if (outcome.leftover() > 0) {
+				run.setNote(run.getNote() + "; deckel=" + properties.maxOffersPerRun() + ", offen(" + profile.getName() + ")=" + outcome.leftover());
+			}
 		}
-		analyze(active, Instant.EPOCH, run);
+		run.setAnalyzedOffers(analyzed);
+		run.setInputTokens(inputTokens);
+		run.setOutputTokens(outputTokens);
 	}
 
 	/** Re-Analyse „Bestand gegen Profil X bewerten", optional auf ein Zeitfenster begrenzt. */
@@ -79,7 +93,13 @@ public class AnalysisService {
 	public Run reanalyze(Long profileId, Integer days) {
 		Profile profile = profiles.findById(profileId).orElseThrow(() -> new ProfileNotFoundException(profileId));
 		Run run = runs.save(new Run(0, 0, "reanalyse profil=" + profile.getName() + (days == null ? "" : ", tage=" + days)));
-		analyze(profile, since(days), run);
+		AnalysisOutcome outcome = analyze(profile, since(days));
+		run.setAnalyzedOffers(outcome.analyzed());
+		run.setInputTokens(outcome.inputTokens());
+		run.setOutputTokens(outcome.outputTokens());
+		if (outcome.leftover() > 0) {
+			run.setNote(run.getNote() + "; deckel=" + properties.maxOffersPerRun() + ", offen=" + outcome.leftover());
+		}
 		return run;
 	}
 
@@ -107,12 +127,18 @@ public class AnalysisService {
 		return LocalDate.now().minusDays(days - 1L).atStartOfDay(ZoneId.systemDefault()).toInstant();
 	}
 
-	private void analyze(Profile profile, Instant since, Run run) {
+	/** Ergebnis eines einzelnen Analyse-Durchlaufs für genau ein Profil. */
+	private record AnalysisOutcome(int analyzed, long inputTokens, long outputTokens, int leftover) {
+		private static final AnalysisOutcome EMPTY = new AnalysisOutcome(0, 0, 0, 0);
+	}
+
+	private AnalysisOutcome analyze(Profile profile, Instant since) {
 		List<Offer> candidates = offers.findUnanalyzedPrimarySince(profile.getId(), since);
 		if (candidates.isEmpty()) {
-			return;
+			return AnalysisOutcome.EMPTY;
 		}
 
+		// Kostendeckel: Abbruch mit Hinweis statt Kostenexplosion.
 		List<Offer> batch = candidates.subList(0, Math.min(candidates.size(), properties.maxOffersPerRun()));
 		AnalysisResult result = analyzer.analyze(profile, batch);
 		Map<Long, Offer> byId = batch.stream().collect(Collectors.toMap(Offer::getId, Function.identity()));
@@ -127,14 +153,8 @@ public class AnalysisService {
 			analyzed++;
 		}
 
-		run.setAnalyzedOffers(analyzed);
-		run.setInputTokens(result.inputTokens());
-		run.setOutputTokens(result.outputTokens());
-		int leftOver = candidates.size() - batch.size();
-		if (leftOver > 0) {
-			// Kostendeckel: Abbruch mit Hinweis statt Kostenexplosion.
-			run.setNote(run.getNote() + "; deckel=" + properties.maxOffersPerRun() + ", offen=" + leftOver);
-		}
+		int leftover = candidates.size() - batch.size();
+		return new AnalysisOutcome(analyzed, result.inputTokens(), result.outputTokens(), leftover);
 	}
 
 	private void apply(Offer offer, Profile profile, OfferAssessment assessment) {

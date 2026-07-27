@@ -145,9 +145,10 @@ class CollectControllerTest {
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.newOffers").value(2))
 			.andExpect(jsonPath("$.totalSeen").value(1))
-			.andExpect(jsonPath("$.analyzedOffers").value(2))
-			.andExpect(jsonPath("$.inputTokens").value(1200))
-			.andExpect(jsonPath("$.outputTokens").value(300));
+			// 2 Angebote × 2 geseedete Profile: ein Abruf-Lauf analysiert gegen alle Profile.
+			.andExpect(jsonPath("$.analyzedOffers").value(4))
+			.andExpect(jsonPath("$.inputTokens").value(2400))
+			.andExpect(jsonPath("$.outputTokens").value(600));
 
 		mockMvc
 			.perform(get("/api/offers"))
@@ -219,7 +220,7 @@ class CollectControllerTest {
 				agentMailBody(projectBlock("Senior Angular Entwickler (m/w/d)", 3026991L))
 			)
 		);
-		// Lauf 1 analysiert gegen das aktive Standard-Profil.
+		// Lauf 1 analysiert gegen beide geseedeten Profile.
 		mockMvc.perform(post("/api/runs")).andExpect(status().isCreated());
 
 		String created = mockMvc
@@ -290,8 +291,9 @@ class CollectControllerTest {
 				agentMailBody(projectBlock("Senior Angular Entwickler (m/w/d)", 3026991L))
 			)
 		);
-		// Erster Lauf analysiert das eine Angebot (1200/300 Tokens laut Stub-Analyzer), der
-		// zweite findet keine neue Mail mehr und analysiert nichts (0 Tokens).
+		// Erster Lauf analysiert das eine Angebot gegen beide geseedeten Profile (2 × 1200/300
+		// Tokens laut Stub-Analyzer), der zweite findet keine neue Mail mehr und analysiert
+		// nichts (0 Tokens).
 		mockMvc.perform(post("/api/runs")).andExpect(status().isCreated());
 		mockMvc.perform(post("/api/runs")).andExpect(status().isCreated());
 
@@ -300,6 +302,6 @@ class CollectControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$", hasSize(2)))
 			.andExpect(jsonPath("$[0].inputTokens").value(0))
-			.andExpect(jsonPath("$[1].inputTokens").value(1200));
+			.andExpect(jsonPath("$[1].inputTokens").value(2400));
 	}
 }
