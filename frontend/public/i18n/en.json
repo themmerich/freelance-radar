@@ -44,6 +44,7 @@
       "modeEdit": "Editing",
       "modeNew": "New",
       "save": "Save",
+      "cancel": "Cancel",
       "create": "Create",
       "saveError": "Saving failed."
     },
@@ -57,7 +58,13 @@
       "done": "{{analyzed}} scored",
       "dialogTitle": "Re-score offers?",
       "dialogPrompt": "The profile changed. Should existing offers be re-scored against it — and if so, since when?",
-      "skip": "Skip"
+      "skip": "Skip",
+      "error": "The re-analysis failed.",
+      "toast": {
+        "successSummary": "Re-analysis completed",
+        "successDetail": "{{analyzed}} offers re-scored",
+        "errorSummary": "Re-analysis failed"
+      }
     }
   },
   "offers": {

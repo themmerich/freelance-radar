@@ -2,9 +2,24 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { TranslocoTestingModule } from '@jsverse/transloco';
+import { MessageService, ToastMessageOptions } from 'primeng/api';
 
 import { Profile } from '../domain/profile';
 import { ProfilesStore } from './profiles-store';
+
+const en = {
+  profiles: {
+    reanalysis: {
+      error: 'The re-analysis failed.',
+      toast: {
+        successSummary: 'Re-analysis completed',
+        successDetail: '{{analyzed}} offers re-scored',
+        errorSummary: 'Re-analysis failed',
+      },
+    },
+  },
+};
 
 const STANDARD: Profile = {
   id: 1,
@@ -23,13 +38,23 @@ const STANDARD: Profile = {
 describe('ProfilesStore', () => {
   let store: ProfilesStore;
   let httpMock: HttpTestingController;
+  let toasts: ToastMessageOptions[];
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      imports: [
+        TranslocoTestingModule.forRoot({
+          langs: { en },
+          translocoConfig: { availableLangs: ['en'], defaultLang: 'en' },
+          preloadLangs: true,
+        }),
+      ],
+      providers: [provideHttpClient(), provideHttpClientTesting(), MessageService],
     });
     store = TestBed.inject(ProfilesStore);
     httpMock = TestBed.inject(HttpTestingController);
+    toasts = [];
+    TestBed.inject(MessageService).messageObserver.subscribe((message) => toasts.push(message as ToastMessageOptions));
   });
 
   afterEach(() => httpMock.verify());
@@ -93,6 +118,24 @@ describe('ProfilesStore', () => {
     });
 
     expect(store.lastReanalysisRun()?.analyzedOffers).toBe(12);
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0].severity).toBe('success');
+    expect(toasts[0].detail).toBe('12 offers re-scored');
+  });
+
+  it('toasts the server problem detail when a reanalysis fails', async () => {
+    await respondToListReload([STANDARD]);
+
+    store.reanalyze(1, null);
+
+    httpMock
+      .expectOne((req) => req.method === 'POST' && req.url === '/api/analyses')
+      .flush({ detail: 'Profil nicht gefunden' }, { status: 404, statusText: 'Not Found' });
+
+    expect(store.hasSaveError()).toBe(true);
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0].severity).toBe('error');
+    expect(toasts[0].detail).toBe('Profil nicht gefunden');
   });
 
   it('requests a cost preview with the chosen window', async () => {

@@ -38,6 +38,14 @@ async function mockApi(page: Page): Promise<void> {
     }
     return route.fulfill({ json: [STANDARD] });
   });
+  // PUT geht an /api/profiles/{id}, nicht an /api/profiles selbst — ohne eigene Route
+  // landet der Request auf dem SPA-Fallback (Produktions-Build), der Editor bliebe stumm.
+  await page.route('**/api/profiles/*', (route) => {
+    if (route.request().method() === 'PUT') {
+      return route.fulfill({ json: { ...STANDARD, ...route.request().postDataJSON() } });
+    }
+    return route.fulfill({ json: STANDARD });
+  });
   await page.route('**/api/analyses/preview**', (route) =>
     route.fulfill({ json: { candidates: 5, estimatedInputTokens: 4000, estimatedOutputTokens: 850 } }),
   );
@@ -145,6 +153,53 @@ test.describe('Profiles page e2e', () => {
     await page.getByRole('button', { name: 'Copy profile Standard' }).first().click();
 
     await expect(page.getByLabel('Name')).toHaveValue('Standard (copy 2)');
+  });
+
+  test('discards edits when cancel is clicked', async ({ page }) => {
+    await page.getByRole('button', { name: /^Standard/ }).click();
+
+    await page.getByLabel('Focus').fill('Temporary edit');
+    await page.getByRole('button', { name: 'Cancel' }).click();
+
+    await expect(page.getByLabel('Focus')).toHaveValue('Agentic UI / AI Engineering');
+  });
+
+  test('prompts to re-score offers after saving a profile change, and toasts the result', async ({ page }) => {
+    await page.getByRole('button', { name: /^Standard/ }).click();
+    await page.getByLabel('Focus').fill('Agentic UI / AI Engineering, updated');
+
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    // Skopiert auf den Dialog: die persistente Kachel darunter hat ebenfalls einen "Score"-Button.
+    const dialog = page.getByRole('dialog', { name: 'Re-score offers?' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText('The profile changed.')).toBeVisible();
+
+    // Der Dialog fragt per force nach ALLEN Angeboten, nicht nur unbewerteten — 5 laut Mock.
+    await dialog.getByRole('button', { name: 'Score' }).click();
+
+    await expect(page.getByText('Re-analysis completed')).toBeVisible();
+    await expect(page.getByText('12 offers re-scored')).toBeVisible();
+  });
+
+  test('skipping the re-score dialog does not trigger a reanalysis', async ({ page }) => {
+    await page.getByRole('button', { name: /^Standard/ }).click();
+    await page.getByLabel('Focus').fill('Agentic UI / AI Engineering, updated');
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    const dialog = page.getByRole('dialog', { name: 'Re-score offers?' });
+    await expect(dialog).toBeVisible();
+
+    const reanalyzeCalls: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().endsWith('/api/analyses') && request.method() === 'POST') {
+        reanalyzeCalls.push(request.url());
+      }
+    });
+    await dialog.getByRole('button', { name: 'Skip' }).click();
+
+    await expect(dialog).toBeHidden();
+    expect(reanalyzeCalls).toHaveLength(0);
   });
 
   test('creates a new profile with a skill chip', async ({ page }) => {

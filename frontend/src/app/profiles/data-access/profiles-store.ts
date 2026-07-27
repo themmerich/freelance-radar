@@ -1,6 +1,8 @@
-import { HttpClient, httpResource } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, httpResource } from '@angular/common/http';
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { TranslocoService } from '@jsverse/transloco';
+import { MessageService } from 'primeng/api';
 import { Observable } from 'rxjs';
 
 import { AnalysisPreview, Profile, ProfileDraft } from '../domain/profile';
@@ -14,6 +16,8 @@ const ANALYSES_URL = '/api/analyses';
 export class ProfilesStore {
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly messages = inject(MessageService);
+  private readonly transloco = inject(TranslocoService);
 
   private readonly profilesResource = httpResource<Profile[]>(() => PROFILES_URL, { defaultValue: [] });
 
@@ -63,10 +67,22 @@ export class ProfilesStore {
         next: (run) => {
           this.saving.set(false);
           this.reanalysisRun.set(run);
+          this.messages.add({
+            severity: 'success',
+            summary: this.transloco.translate('profiles.reanalysis.toast.successSummary'),
+            detail: this.transloco.translate('profiles.reanalysis.toast.successDetail', { analyzed: run.analyzedOffers }),
+          });
         },
-        error: () => {
+        error: (error: HttpErrorResponse) => {
           this.saving.set(false);
           this.failed.set(true);
+          const serverDetail = typeof error.error?.detail === 'string' ? error.error.detail : null;
+          this.messages.add({
+            severity: 'error',
+            summary: this.transloco.translate('profiles.reanalysis.toast.errorSummary'),
+            detail: serverDetail ?? this.transloco.translate('profiles.reanalysis.error'),
+            sticky: true,
+          });
         },
       });
   }

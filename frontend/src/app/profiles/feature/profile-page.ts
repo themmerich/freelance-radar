@@ -145,6 +145,9 @@ type EditorMode = { kind: 'new' } | { kind: 'edit'; id: number; name: string } |
                   [disabled]="!draft().name.trim()"
                   (onClick)="save()"
                 />
+                @if (isEditing()) {
+                  <p-button type="button" [text]="true" [label]="t('profiles.editor.cancel')" (onClick)="cancelEdit()" />
+                }
                 @if (store.hasSaveError()) {
                   <p class="text-red-500" role="alert">{{ t('profiles.editor.saveError') }}</p>
                 }
@@ -291,6 +294,14 @@ export class ProfilePage {
     this.mode.set({ kind: 'edit', id: profile.id, name: profile.name });
     this.draft.set(draftOf(profile));
     this.loadPreview();
+  }
+
+  /** Verwirft unsicherte Änderungen: den Draft aus dem gespeicherten Stand neu aufbauen. */
+  protected cancelEdit(): void {
+    const profile = this.store.profiles().find((candidate) => candidate.id === this.selectedId());
+    if (profile) {
+      this.select(profile);
+    }
   }
 
   protected startNew(): void {
