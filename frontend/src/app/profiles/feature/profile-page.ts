@@ -10,6 +10,7 @@ import { TagModule } from 'primeng/tag';
 import { ProfilesStore } from '../data-access/profiles-store';
 import { AnalysisPreview, Profile, ProfileDraft, SKILL_CATEGORIES, draftOf, emptyDraft } from '../domain/profile';
 import { ChipList } from '../ui/chip-list';
+import { ScoreDialog } from '../ui/score-dialog';
 import { runCostCents } from '../../shared/util/run-cost';
 
 /** Freitext-Felder des Editors in Anzeigereihenfolge; der Feldname ist auch der i18n-Key. */
@@ -25,7 +26,7 @@ type EditorMode = { kind: 'new' } | { kind: 'edit'; id: number; name: string } |
 
 @Component({
   selector: 'app-profile-page',
-  imports: [DecimalPipe, TranslocoDirective, ButtonModule, CardModule, DialogModule, TagModule, ChipList],
+  imports: [DecimalPipe, TranslocoDirective, ButtonModule, CardModule, DialogModule, TagModule, ChipList, ScoreDialog],
   template: `
     <main class="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <ng-container *transloco="let t">
@@ -54,6 +55,14 @@ type EditorMode = { kind: 'new' } | { kind: 'edit'; id: number; name: string } |
                   [text]="true"
                   [ariaLabel]="t('profiles.list.duplicate', { name: profile.name })"
                   (onClick)="duplicate(profile)"
+                />
+                <p-button
+                  type="button"
+                  size="small"
+                  icon="pi pi-sparkles"
+                  [text]="true"
+                  [ariaLabel]="t('profiles.list.score', { name: profile.name })"
+                  (onClick)="openScoreDialog(profile)"
                 />
                 <!-- Auch das aktive Profil ist löschbar (das Backend aktiviert dann ein
                      anderes); nur das letzte nicht — es muss immer eines geben. -->
@@ -156,49 +165,19 @@ type EditorMode = { kind: 'new' } | { kind: 'edit'; id: number; name: string } |
                 <p class="text-red-500" role="alert">{{ t('profiles.editor.saveError') }}</p>
               }
             </div>
-
-            @if (selectedId() !== null) {
-              <div class="flex flex-col gap-3 rounded border border-surface-200 p-4 dark:border-surface-700">
-                <h3 class="font-medium">{{ t('profiles.reanalysis.title') }}</h3>
-                <div class="flex flex-wrap items-center gap-4 text-sm">
-                  <label class="flex items-center gap-2">
-                    <span>{{ t('profiles.reanalysis.range') }}</span>
-                    <select
-                      class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
-                      [value]="days() === null ? 'all' : days()"
-                      (change)="onDaysChange($event)"
-                    >
-                      <option value="all">{{ t('profiles.reanalysis.all') }}</option>
-                      <option value="7">{{ t('profiles.reanalysis.days', { days: 7 }) }}</option>
-                      <option value="30">{{ t('profiles.reanalysis.days', { days: 30 }) }}</option>
-                      <option value="90">{{ t('profiles.reanalysis.days', { days: 90 }) }}</option>
-                    </select>
-                  </label>
-                  @if (preview(); as p) {
-                    <span>
-                      {{ t('profiles.reanalysis.preview', { candidates: p.candidates }) }}
-                      · ≈{{ costCents(p.estimatedInputTokens, p.estimatedOutputTokens) | number: '1.1-2' }} ct
-                    </span>
-                  }
-                  <p-button
-                    type="button"
-                    icon="pi pi-sparkles"
-                    [label]="t('profiles.reanalysis.run')"
-                    [loading]="store.isSaving()"
-                    [disabled]="preview()?.candidates === 0"
-                    (onClick)="reanalyze()"
-                  />
-                </div>
-                @if (store.lastReanalysisRun(); as run) {
-                  <p class="text-sm text-surface-600 dark:text-surface-300">
-                    {{ t('profiles.reanalysis.done', { analyzed: run.analyzedOffers }) }}
-                    · ≈{{ costCents(run.inputTokens, run.outputTokens) | number: '1.1-2' }} ct
-                  </p>
-                }
-              </div>
-            }
           </div>
         </p-dialog>
+
+        <!-- Bewerten läuft profilweise über die Liste, nicht über den Editor: die Kosten
+             hängen am Profil, nicht daran, ob man es gerade bearbeitet. -->
+        <app-score-dialog
+          [(visible)]="showScoreDialog"
+          [profileName]="scoreProfile()?.name ?? ''"
+          [days]="scoreDays()"
+          (daysChange)="onScoreDaysChange($event)"
+          [preview]="scorePreview()"
+          (score)="score()"
+        />
 
         <!-- Erscheint nach Anlegen/Speichern: das Profil hat sich geändert, bisherige
              Bewertungen (auch schon analysierte Angebote) sind damit potenziell veraltet. -->
@@ -262,11 +241,15 @@ export class ProfilePage {
   });
 
   protected readonly draft = signal<ProfileDraft>(emptyDraft());
-  protected readonly days = signal<number | null>(null);
-  protected readonly preview = signal<AnalysisPreview | null>(null);
 
   /** Das Anlegen-/Bearbeiten-Formular lebt in einem Dialog statt permanent auf der Seite. */
   protected readonly showEditorDialog = signal(false);
+
+  /** „Bewerten"-Dialog eines Listeneintrags: für welches Profil, mit welchem Zeitfenster. */
+  protected readonly showScoreDialog = signal(false);
+  protected readonly scoreProfile = signal<Profile | null>(null);
+  protected readonly scoreDays = signal<number | null>(null);
+  protected readonly scorePreview = signal<AnalysisPreview | null>(null);
 
   /**
    * Nach Anlegen/Speichern: fragt ab, ob (und ab wann) der Bestand mit dem neuen
@@ -302,7 +285,6 @@ export class ProfilePage {
   protected select(profile: Profile): void {
     this.mode.set({ kind: 'edit', id: profile.id, name: profile.name });
     this.draft.set(draftOf(profile));
-    this.loadPreview();
   }
 
   /** Schließt den Editor-Dialog, ohne zu speichern — der Draft wird beim nächsten Öffnen frisch aufgebaut. */
@@ -313,7 +295,6 @@ export class ProfilePage {
   protected startNew(): void {
     this.mode.set({ kind: 'new' });
     this.draft.set(emptyDraft());
-    this.preview.set(null);
     this.showEditorDialog.set(true);
   }
 
@@ -324,7 +305,6 @@ export class ProfilePage {
    */
   protected duplicate(profile: Profile): void {
     this.mode.set({ kind: 'copy', source: profile.name });
-    this.preview.set(null);
     this.draft.set({ ...draftOf(profile), name: this.freeCopyName(profile.name) });
     this.showEditorDialog.set(true);
   }
@@ -355,18 +335,38 @@ export class ProfilePage {
     }
   }
 
-  protected reanalyze(): void {
-    const id = this.selectedId();
-    if (id !== null) {
-      this.store.reanalyze(id, this.days());
-      this.loadPreview();
-    }
+  /** Öffnet den Bewerten-Dialog für einen Listeneintrag; startet immer beim gesamten Bestand. */
+  protected openScoreDialog(profile: Profile): void {
+    this.scoreProfile.set(profile);
+    this.scoreDays.set(null);
+    this.loadScorePreview();
+    this.showScoreDialog.set(true);
   }
 
-  protected onDaysChange(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
-    this.days.set(value === 'all' ? null : Number(value));
-    this.loadPreview();
+  protected onScoreDaysChange(days: number | null): void {
+    this.scoreDays.set(days);
+    this.loadScorePreview();
+  }
+
+  /** Der Lauf dauert; der Dialog schließt sofort, das Ergebnis meldet der Toast des Stores. */
+  protected score(): void {
+    const profile = this.scoreProfile();
+    if (profile !== null) {
+      this.store.reanalyze(profile.id, this.scoreDays());
+    }
+    this.showScoreDialog.set(false);
+  }
+
+  private loadScorePreview(): void {
+    const profile = this.scoreProfile();
+    if (profile === null) {
+      this.scorePreview.set(null);
+      return;
+    }
+    this.store
+      .preview(profile.id, this.scoreDays())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((preview) => this.scorePreview.set(preview));
   }
 
   private openReanalysisDialog(): void {
@@ -385,7 +385,6 @@ export class ProfilePage {
     const id = this.selectedId();
     if (id !== null) {
       this.store.reanalyze(id, this.dialogDays(), true);
-      this.loadPreview();
     }
     this.showReanalysisDialog.set(false);
   }
@@ -435,17 +434,5 @@ export class ProfilePage {
 
   protected removeSignal(field: 'strongSignals' | 'weakSignals', value: string): void {
     this.draft.set({ ...this.draft(), [field]: this.draft()[field].filter((item) => item !== value) });
-  }
-
-  private loadPreview(): void {
-    const id = this.selectedId();
-    if (id === null) {
-      this.preview.set(null);
-      return;
-    }
-    this.store
-      .preview(id, this.days())
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((preview) => this.preview.set(preview));
   }
 }

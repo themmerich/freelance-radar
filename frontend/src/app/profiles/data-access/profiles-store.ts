@@ -30,10 +30,6 @@ export class ProfilesStore {
   private readonly failed = signal(false);
   readonly hasSaveError = this.failed.asReadonly();
 
-  /** Ergebnis des letzten Re-Analyse-Laufs (für die Kostenanzeige im Panel). */
-  private readonly reanalysisRun = signal<Run | null>(null);
-  readonly lastReanalysisRun = this.reanalysisRun.asReadonly();
-
   /** `onCreated` bekommt das angelegte Profil — der Editor wechselt damit in den Ändern-Modus. */
   create(draft: ProfileDraft, onCreated?: (profile: Profile) => void): void {
     this.mutate(this.http.post<Profile>(PROFILES_URL, draft), onCreated);
@@ -62,7 +58,6 @@ export class ProfilesStore {
       .subscribe({
         next: (run) => {
           this.saving.set(false);
-          this.reanalysisRun.set(run);
           this.messages.add({
             severity: 'success',
             summary: this.transloco.translate('profiles.reanalysis.toast.successSummary'),

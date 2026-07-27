@@ -93,17 +93,40 @@ test.describe('Profiles page e2e', () => {
     await deleted;
   });
 
-  test('shows the cost preview and scores the backlog', async ({ page }) => {
-    await page.getByRole('button', { name: /^Standard/ }).click();
+  test('shows the cost preview and scores the entire backlog after a warning', async ({ page }) => {
+    await page.getByRole('button', { name: 'Score offers against profile Standard' }).click();
 
+    const dialog = page.getByRole('dialog', { name: 'Score · Standard' });
     // 4000 Input- + 850 Output-Tokens auf Haiku ≈ 0,83 ct
-    await expect(page.getByText('5 offers open')).toBeVisible();
-    await expect(page.getByText('≈0.83 ct')).toBeVisible();
+    await expect(dialog.getByText('5 offers open')).toBeVisible();
+    await expect(dialog.getByText('≈0.83 ct')).toBeVisible();
 
-    // Nicht exact: das Button-Icon steuert ein Glyph-Zeichen zum Accessible Name bei.
-    await page.getByRole('button', { name: 'Score' }).click();
+    // Der gesamte Bestand ist vorausgewählt und läuft ohne Kostendeckel — erst die Warnung.
+    await dialog.getByRole('button', { name: 'Score' }).click();
+    const confirmation = page.getByRole('dialog', { name: 'Score the entire backlog?' });
+    await expect(confirmation.getByText('All 5 open offers')).toBeVisible();
 
-    await expect(page.getByText('12 scored')).toBeVisible();
+    const scored = page.waitForRequest((request) => request.url().endsWith('/api/analyses') && request.method() === 'POST');
+    await confirmation.getByRole('button', { name: 'Score' }).click();
+    const request = await scored;
+
+    expect(request.postDataJSON()).toMatchObject({ profileId: 1, days: null, force: false });
+    await expect(page.getByText('12 offers re-scored')).toBeVisible();
+  });
+
+  test('scores a time window without the warning', async ({ page }) => {
+    await page.getByRole('button', { name: 'Score offers against profile Standard' }).click();
+
+    const dialog = page.getByRole('dialog', { name: 'Score · Standard' });
+    await dialog.getByLabel('Range').selectOption('30');
+
+    const scored = page.waitForRequest((request) => request.url().endsWith('/api/analyses') && request.method() === 'POST');
+    await dialog.getByRole('button', { name: 'Score' }).click();
+    const request = await scored;
+
+    // Ein Zeitfenster bleibt gedeckelt, deshalb ohne Rückfrage.
+    expect(request.postDataJSON()).toMatchObject({ profileId: 1, days: 30, force: false });
+    await expect(page.getByRole('dialog', { name: 'Score the entire backlog?' })).toBeHidden();
   });
 
   test('marks the editor mode as editing, new, or copy', async ({ page }) => {
@@ -139,8 +162,6 @@ test.describe('Profiles page e2e', () => {
     await expect(page.getByLabel('Name')).toHaveValue('Standard (copy)');
     await expect(page.getByText('Angular (2-22)')).toBeVisible();
     await expect(page.getByText('React')).toBeVisible();
-    // Kein Re-Analyse-Panel — die Kopie existiert noch nicht.
-    await expect(page.getByRole('button', { name: 'Score' })).toHaveCount(0);
 
     // Nur den Unterschied einspielen …
     await page.getByLabel('Name').fill('Standard ohne React');

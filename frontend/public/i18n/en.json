@@ -15,6 +15,7 @@
     "list": {
       "delete": "Delete profile {{name}}",
       "duplicate": "Copy profile {{name}}",
+      "score": "Score offers against profile {{name}}",
       "copyName": "{{name}} (copy)",
       "copyNameNumbered": "{{name}} (copy {{count}})",
       "new": "New profile"
@@ -46,14 +47,19 @@
       "create": "Create",
       "saveError": "Saving failed."
     },
+    "score": {
+      "title": "Score · {{name}}",
+      "close": "Close",
+      "cancel": "Cancel",
+      "confirmTitle": "Score the entire backlog?",
+      "confirmWarning": "All {{candidates}} open offers are scored in one go — the usual per-run cap does not apply here. This can take a while and cost accordingly."
+    },
     "reanalysis": {
-      "title": "Score the backlog against this profile",
       "range": "Range",
       "all": "Entire backlog",
       "days": "Last {{days}} days",
       "preview": "{{candidates}} offers open",
       "run": "Score",
-      "done": "{{analyzed}} scored",
       "dialogTitle": "Re-score offers?",
       "dialogPrompt": "The profile changed. Should existing offers be re-scored against it — and if so, since when?",
       "skip": "Skip",

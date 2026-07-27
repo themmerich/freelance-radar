@@ -96,7 +96,7 @@ describe('ProfilesStore', () => {
     expect(created).toMatchObject({ id: 2, name: 'Standard (Kopie)' });
   });
 
-  it('starts a reanalysis run and exposes its result', async () => {
+  it('starts a reanalysis run and toasts its result', async () => {
     await respondToListReload([STANDARD]);
 
     store.reanalyze(1, 30);
@@ -114,7 +114,6 @@ describe('ProfilesStore', () => {
       note: 'reanalyse profil=Standard, tage=30',
     });
 
-    expect(store.lastReanalysisRun()?.analyzedOffers).toBe(12);
     expect(toasts).toHaveLength(1);
     expect(toasts[0].severity).toBe('success');
     expect(toasts[0].detail).toBe('12 offers re-scored');
@@ -167,7 +166,7 @@ describe('ProfilesStore', () => {
       note: 'reanalyse (erzwungen) profil=Standard',
     });
 
-    expect(store.lastReanalysisRun()?.analyzedOffers).toBe(5);
+    expect(toasts[0].detail).toBe('5 offers re-scored');
   });
 
   it('includes force in the preview request only when set', async () => {
