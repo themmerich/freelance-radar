@@ -63,16 +63,27 @@ public class ProfileController {
 		return mapper.toResponse(profile);
 	}
 
-	/** Analyse-Ergebnisse des Profils fallen per ON DELETE CASCADE mit weg. */
+	/**
+	 * Analyse-Ergebnisse des Profils fallen per ON DELETE CASCADE mit weg. Nur das letzte
+	 * Profil bleibt bestehen — es muss immer eines geben. War das gelöschte aktiv, rückt
+	 * das alphabetisch erste der übrigen nach, damit weiterhin genau eines aktiv ist.
+	 */
 	@DeleteMapping("/{id}")
+	@Transactional
 	public ResponseEntity<Object> delete(@PathVariable Long id) {
 		Profile profile = profiles.findById(id).orElseThrow(() -> new ProfileNotFoundException(id));
-		if (profile.isActive()) {
+		if (profiles.count() <= 1) {
 			return ResponseEntity
 				.unprocessableEntity()
-				.body(ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, "Das aktive Profil kann nicht gelöscht werden."));
+				.body(ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, "Das letzte Profil kann nicht gelöscht werden."));
 		}
 		profiles.delete(profile);
+		if (profile.isActive()) {
+			// Löschung vor der Aktivierung in die DB schreiben, sonst kollidiert der
+			// partielle Unique-Index uq_profiles_active bei Hibernates Flush-Reihenfolge.
+			profiles.flush();
+			profiles.findAllByOrderByNameAsc().getFirst().setActive(true);
+		}
 		return ResponseEntity.noContent().build();
 	}
 

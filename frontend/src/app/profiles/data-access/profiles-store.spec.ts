@@ -71,18 +71,15 @@ describe('ProfilesStore', () => {
     expect(store.profiles()).toEqual([STANDARD]);
   });
 
-  it('activates a profile and reloads the list', async () => {
+  it('deletes a profile and reloads the list', async () => {
+    await respondToListReload([STANDARD, { ...STANDARD, id: 2, name: 'Fullstack', active: false }]);
+
+    store.remove(2);
+
+    httpMock.expectOne((req) => req.method === 'DELETE' && req.url === '/api/profiles/2').flush(null);
     await respondToListReload([STANDARD]);
 
-    store.activate(2);
-
-    httpMock.expectOne((req) => req.method === 'POST' && req.url === '/api/profiles/2/activate').flush({});
-    await respondToListReload([
-      { ...STANDARD, active: false },
-      { ...STANDARD, id: 2, name: 'Fullstack', active: true },
-    ]);
-
-    expect(store.profiles()).toHaveLength(2);
+    expect(store.profiles()).toEqual([STANDARD]);
   });
 
   it('hands the created profile to the callback so the editor can switch to it', async () => {

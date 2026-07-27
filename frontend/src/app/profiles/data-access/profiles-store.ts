@@ -48,10 +48,6 @@ export class ProfilesStore {
     this.mutate(this.http.delete<void>(`${PROFILES_URL}/${id}`));
   }
 
-  activate(id: number): void {
-    this.mutate(this.http.post<Profile>(`${PROFILES_URL}/${id}/activate`, {}));
-  }
-
   /**
    * Re-Analyse „Bestand gegen Profil X bewerten"; `days` null = gesamter Bestand.
    * `force`: auch bereits bewertete Angebote neu bewerten (nach einer Profiländerung —

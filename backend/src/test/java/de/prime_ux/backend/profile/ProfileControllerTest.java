@@ -1,6 +1,7 @@
 package de.prime_ux.backend.profile;
 
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -19,6 +20,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest(properties = { "radar.state-dir=build/test-state", "spring.ai.anthropic.api-key=test-key" })
@@ -131,18 +133,29 @@ class ProfileControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$[?(@.name=='" + DEFAULT_PROFILE + "')].active", contains(false)));
 
-		// Das aktive Profil ist nicht löschbar; nach Rückwechsel schon.
-		mockMvc.perform(delete("/api/profiles/{id}", id)).andExpect(status().isUnprocessableEntity());
-
-		long standardId = profiles
-			.findAllByOrderByNameAsc()
-			.stream()
-			.filter(p -> p.getName().equals(DEFAULT_PROFILE))
-			.findFirst()
-			.orElseThrow()
-			.getId();
-		mockMvc.perform(post("/api/profiles/{id}/activate", standardId)).andExpect(status().isOk());
+		// Auch das aktive Profil ist löschbar — das alphabetisch erste übrige rückt nach.
 		mockMvc.perform(delete("/api/profiles/{id}", id)).andExpect(status().isNoContent());
+		mockMvc
+			.perform(get("/api/profiles"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[?(@.name=='" + DEFAULT_PROFILE + "')].active", contains(true)));
+	}
+
+	/**
+	 * Rollback statt Handaufräumen: der Test löscht eines der geseedeten Profile, die
+	 * die übrigen Testklassen erwarten — @Transactional macht das am Testende rückgängig.
+	 */
+	@Test
+	@Transactional
+	void keepsTheLastProfileUndeletable() throws Exception {
+		mockMvc.perform(delete("/api/profiles/{id}", idOf(ANGULAR_PROFILE))).andExpect(status().isNoContent());
+
+		mockMvc.perform(delete("/api/profiles/{id}", idOf(DEFAULT_PROFILE))).andExpect(status().isUnprocessableEntity());
+		mockMvc.perform(get("/api/profiles")).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)));
+	}
+
+	private long idOf(String name) {
+		return profiles.findAll().stream().filter(p -> name.equals(p.getName())).findFirst().orElseThrow().getId();
 	}
 
 	@Test

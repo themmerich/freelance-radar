@@ -55,26 +55,18 @@ type EditorMode = { kind: 'new' } | { kind: 'edit'; id: number; name: string } |
                   [ariaLabel]="t('profiles.list.duplicate', { name: profile.name })"
                   (onClick)="duplicate(profile)"
                 />
-                @if (profile.active) {
-                  <p-tag severity="success" [value]="t('profiles.list.active')" />
-                } @else {
-                  <p-button
-                    type="button"
-                    size="small"
-                    [text]="true"
-                    [label]="t('profiles.list.activate')"
-                    (onClick)="store.activate(profile.id)"
-                  />
-                  <p-button
-                    type="button"
-                    size="small"
-                    icon="pi pi-trash"
-                    severity="danger"
-                    [text]="true"
-                    [ariaLabel]="t('profiles.list.delete', { name: profile.name })"
-                    (onClick)="store.remove(profile.id)"
-                  />
-                }
+                <!-- Auch das aktive Profil ist löschbar (das Backend aktiviert dann ein
+                     anderes); nur das letzte nicht — es muss immer eines geben. -->
+                <p-button
+                  type="button"
+                  size="small"
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  [disabled]="isLastProfile()"
+                  [ariaLabel]="t('profiles.list.delete', { name: profile.name })"
+                  (onClick)="store.remove(profile.id)"
+                />
               </div>
             }
             <p-button type="button" icon="pi pi-plus" [text]="true" [label]="t('profiles.list.new')" (onClick)="startNew()" />
@@ -87,7 +79,7 @@ type EditorMode = { kind: 'new' } | { kind: 'edit'; id: number; name: string } |
           [visible]="showEditorDialog()"
           (visibleChange)="showEditorDialog.set($event)"
           [modal]="true"
-          [style]="{ width: '52rem', maxWidth: '95vw' }"
+          [style]="{ width: '64rem', maxWidth: '95vw' }"
           [contentStyle]="{ 'max-height': '75vh', 'overflow-y': 'auto' }"
         >
           <ng-template #header>
@@ -287,6 +279,9 @@ export class ProfilePage {
 
   /** Bearbeiten heißt überschreiben; in allen anderen Modi wird angelegt (leer oder als Kopie). */
   protected readonly isEditing = computed(() => this.mode().kind === 'edit');
+
+  /** Es muss immer ein Profil geben — steht nur noch eines in der Liste, bleibt Löschen gesperrt. */
+  protected readonly isLastProfile = computed(() => this.store.profiles().length <= 1);
 
   /** Name der Vorlage, solange eine Kopie im Editor steht — sonst null. */
   protected readonly copySource = computed(() => {
