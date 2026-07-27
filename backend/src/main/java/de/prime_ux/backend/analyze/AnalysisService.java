@@ -25,10 +25,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Analysiert Angebote gegen ein Profil: nur primäre Einträge ohne Ergebnis für
- * genau dieses Profil (Kopien anderer Agenten kosten nie Tokens), gedeckelt auf
- * radar.analysis.max-offers-per-run. Ergebnis und Token-Verbrauch landen am Run;
- * Ergebnisse anderer Profile bleiben unberührt nebeneinander bestehen.
+ * Analysiert Angebote gegen ein Profil: standardmäßig nur primäre Einträge ohne
+ * Ergebnis für genau dieses Profil (Kopien anderer Agenten kosten nie Tokens),
+ * gedeckelt auf radar.analysis.max-offers-per-run pro Profil. Ergebnis und
+ * Token-Verbrauch landen am Run; Ergebnisse anderer Profile bleiben unberührt
+ * nebeneinander bestehen. Ein Abruf-Lauf analysiert automatisch gegen alle
+ * Profile, nicht nur das aktive. Mit {@code force} zählen bei einer Re-Analyse
+ * auch bereits bewertete Angebote als Kandidaten — für den Fall, dass sich das
+ * Profil geändert hat und seine alten Ergebnisse damit veraltet sind.
  */
 @Service
 public class AnalysisService {
@@ -63,35 +67,60 @@ public class AnalysisService {
 		this.properties = properties;
 	}
 
-	/** Nach einem Abruf-Lauf: neue Angebote gegen das aktive Profil bewerten. */
+	/**
+	 * Nach einem Abruf-Lauf: neue Angebote gegen alle Profile bewerten, nicht nur das
+	 * aktive — sonst bleibt die Ansicht der anderen Profile leer, bis jemand händisch
+	 * nachanalysiert. Jedes Profil zählt einzeln gegen den Kostendeckel.
+	 */
 	@Transactional
 	public void analyzeNewOffers(Run run) {
-		Profile active = profiles.findByActiveTrue().orElse(null);
-		if (active == null) {
-			run.setNote(run.getNote() + "; kein aktives profil");
-			return;
+		int analyzed = 0;
+		long inputTokens = 0;
+		long outputTokens = 0;
+		for (Profile profile : profiles.findAll()) {
+			AnalysisOutcome outcome = analyze(profile, Instant.EPOCH, false);
+			analyzed += outcome.analyzed();
+			inputTokens += outcome.inputTokens();
+			outputTokens += outcome.outputTokens();
+			if (outcome.leftover() > 0) {
+				run.setNote(run.getNote() + "; deckel=" + properties.maxOffersPerRun() + ", offen(" + profile.getName() + ")=" + outcome.leftover());
+			}
 		}
-		analyze(active, Instant.EPOCH, run);
+		run.setAnalyzedOffers(analyzed);
+		run.setInputTokens(inputTokens);
+		run.setOutputTokens(outputTokens);
 	}
 
-	/** Re-Analyse „Bestand gegen Profil X bewerten", optional auf ein Zeitfenster begrenzt. */
+	/**
+	 * Re-Analyse „Bestand gegen Profil X bewerten", optional auf ein Zeitfenster begrenzt.
+	 * Ohne {@code force} zählen nur noch unbewertete Angebote (die alte „Rest auffüllen"-Funktion);
+	 * mit {@code force} auch bereits bewertete — für den Fall, dass sich das Profil geändert hat
+	 * und seine bisherigen Ergebnisse damit veraltet sind.
+	 */
 	@Transactional
-	public Run reanalyze(Long profileId, Integer days) {
+	public Run reanalyze(Long profileId, Integer days, boolean force) {
 		Profile profile = profiles.findById(profileId).orElseThrow(() -> new ProfileNotFoundException(profileId));
-		Run run = runs.save(new Run(0, 0, "reanalyse profil=" + profile.getName() + (days == null ? "" : ", tage=" + days)));
-		analyze(profile, since(days), run);
+		String note = (force ? "reanalyse (erzwungen) profil=" : "reanalyse profil=") + profile.getName() + (days == null ? "" : ", tage=" + days);
+		Run run = runs.save(new Run(0, 0, note));
+		AnalysisOutcome outcome = analyze(profile, since(days), force);
+		run.setAnalyzedOffers(outcome.analyzed());
+		run.setInputTokens(outcome.inputTokens());
+		run.setOutputTokens(outcome.outputTokens());
+		if (outcome.leftover() > 0) {
+			run.setNote(run.getNote() + "; deckel=" + properties.maxOffersPerRun() + ", offen=" + outcome.leftover());
+		}
 		return run;
 	}
 
-	/** Anzahl noch unbewerteter primärer Angebote für Profil + Zeitfenster (Kostenvorschau). */
-	public int countCandidates(Long profileId, Integer days) {
+	/** Anzahl der Kandidaten für Profil + Zeitfenster (Kostenvorschau); mit {@code force} auch bereits bewertete. */
+	public int countCandidates(Long profileId, Integer days, boolean force) {
 		profiles.findById(profileId).orElseThrow(() -> new ProfileNotFoundException(profileId));
-		return offers.findUnanalyzedPrimarySince(profileId, since(days)).size();
+		return candidatesFor(profileId, since(days), force).size();
 	}
 
 	/** Kostenvorschau: Kandidaten × Ø-Tokens der bisherigen Läufe. */
-	public AnalysisPreview preview(Long profileId, Integer days) {
-		int candidates = countCandidates(profileId, days);
+	public AnalysisPreview preview(Long profileId, Integer days, boolean force) {
+		int candidates = countCandidates(profileId, days, force);
 		TokenTotals totals = runs.tokenTotals();
 		long inputPerOffer = totals.analyzedOffers() > 0 ? totals.inputTokens() / totals.analyzedOffers() : FALLBACK_INPUT_TOKENS_PER_OFFER;
 		long outputPerOffer = totals.analyzedOffers() > 0
@@ -107,12 +136,22 @@ public class AnalysisService {
 		return LocalDate.now().minusDays(days - 1L).atStartOfDay(ZoneId.systemDefault()).toInstant();
 	}
 
-	private void analyze(Profile profile, Instant since, Run run) {
-		List<Offer> candidates = offers.findUnanalyzedPrimarySince(profile.getId(), since);
+	/** Ergebnis eines einzelnen Analyse-Durchlaufs für genau ein Profil. */
+	private record AnalysisOutcome(int analyzed, long inputTokens, long outputTokens, int leftover) {
+		private static final AnalysisOutcome EMPTY = new AnalysisOutcome(0, 0, 0, 0);
+	}
+
+	private List<Offer> candidatesFor(Long profileId, Instant since, boolean force) {
+		return force ? offers.findPrimarySince(since) : offers.findUnanalyzedPrimarySince(profileId, since);
+	}
+
+	private AnalysisOutcome analyze(Profile profile, Instant since, boolean force) {
+		List<Offer> candidates = candidatesFor(profile.getId(), since, force);
 		if (candidates.isEmpty()) {
-			return;
+			return AnalysisOutcome.EMPTY;
 		}
 
+		// Kostendeckel: Abbruch mit Hinweis statt Kostenexplosion.
 		List<Offer> batch = candidates.subList(0, Math.min(candidates.size(), properties.maxOffersPerRun()));
 		AnalysisResult result = analyzer.analyze(profile, batch);
 		Map<Long, Offer> byId = batch.stream().collect(Collectors.toMap(Offer::getId, Function.identity()));
@@ -127,14 +166,8 @@ public class AnalysisService {
 			analyzed++;
 		}
 
-		run.setAnalyzedOffers(analyzed);
-		run.setInputTokens(result.inputTokens());
-		run.setOutputTokens(result.outputTokens());
-		int leftOver = candidates.size() - batch.size();
-		if (leftOver > 0) {
-			// Kostendeckel: Abbruch mit Hinweis statt Kostenexplosion.
-			run.setNote(run.getNote() + "; deckel=" + properties.maxOffersPerRun() + ", offen=" + leftOver);
-		}
+		int leftover = candidates.size() - batch.size();
+		return new AnalysisOutcome(analyzed, result.inputTokens(), result.outputTokens(), leftover);
 	}
 
 	private void apply(Offer offer, Profile profile, OfferAssessment assessment) {

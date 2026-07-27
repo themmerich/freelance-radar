@@ -68,12 +68,15 @@ class AnalysisServiceTest {
 	private RunRepository runs;
 
 	private Long activeProfileId;
+	private Long otherProfileId;
 
 	@BeforeEach
 	void reset() {
 		offers.deleteAll();
 		runs.deleteAll();
-		activeProfileId = profiles.findByActiveTrue().map(Profile::getId).orElseThrow();
+		List<Profile> all = profiles.findAll();
+		activeProfileId = all.stream().filter(Profile::isActive).map(Profile::getId).findFirst().orElseThrow();
+		otherProfileId = all.stream().filter(profile -> !profile.isActive()).map(Profile::getId).findFirst().orElseThrow();
 	}
 
 	@Test
@@ -84,13 +87,20 @@ class AnalysisServiceTest {
 
 		analysis.analyzeNewOffers(run);
 
-		assertThat(run.getAnalyzedOffers()).isEqualTo(1);
-		assertThat(run.getInputTokens()).isEqualTo(500);
-		assertThat(run.getNote()).contains("deckel=1", "offen=1");
+		// Ein Abruf-Lauf analysiert gegen alle Profile — hier zwei geseedete, also zählt der
+		// Deckel (1 Angebot/Lauf) für jedes einzeln: 2× analysiert, 2× Tokens, 2× Leftover-Hinweis.
+		assertThat(run.getAnalyzedOffers()).isEqualTo(2);
+		assertThat(run.getInputTokens()).isEqualTo(1000);
+		assertThat(run.getNote()).contains("deckel=1", "offen(");
 
 		assertThat(analyses.findById(new OfferAnalysisId(oldest.getId(), activeProfileId)))
 			.hasValueSatisfying(result -> assertThat(result.getMatchScore()).isEqualTo(70));
 		assertThat(analyses.findById(new OfferAnalysisId(newest.getId(), activeProfileId))).isEmpty();
+
+		// Gilt genauso für das zweite, inaktive Profil.
+		assertThat(analyses.findById(new OfferAnalysisId(oldest.getId(), otherProfileId)))
+			.hasValueSatisfying(result -> assertThat(result.getMatchScore()).isEqualTo(70));
+		assertThat(analyses.findById(new OfferAnalysisId(newest.getId(), otherProfileId))).isEmpty();
 	}
 
 	@Test

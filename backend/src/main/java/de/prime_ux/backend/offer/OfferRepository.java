@@ -24,4 +24,12 @@ public interface OfferRepository extends JpaRepository<Offer, Long> {
 		order by o.receivedAt asc"""
 	)
 	List<Offer> findUnanalyzedPrimarySince(@Param("profileId") Long profileId, @Param("since") Instant since);
+
+	/**
+	 * Alle primären Angebote ab {@code since} (älteste zuerst), unabhängig vom Analyse-Status.
+	 * Für die erzwungene Neubewertung nach einer Profiländerung — sonst blieben bereits
+	 * bewertete Angebote auf ihrem alten (jetzt veralteten) Ergebnis stehen.
+	 */
+	@Query("select o from Offer o where o.primary = true and o.receivedAt >= :since order by o.receivedAt asc")
+	List<Offer> findPrimarySince(@Param("since") Instant since);
 }

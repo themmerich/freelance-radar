@@ -37,4 +37,18 @@ describe('CostsStore', () => {
     expect(store.runs()).toEqual([RUN]);
     expect(store.isLoading()).toBe(false);
   });
+
+  it('reloads the runs on demand — a run can be triggered from outside this page', async () => {
+    TestBed.tick();
+    httpMock.expectOne((req) => req.method === 'GET' && req.url === '/api/runs').flush([]);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    store.reload();
+    TestBed.tick();
+
+    httpMock.expectOne((req) => req.method === 'GET' && req.url === '/api/runs').flush([RUN]);
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(store.runs()).toEqual([RUN]);
+  });
 });

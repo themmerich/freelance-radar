@@ -13,4 +13,9 @@ export class CostsStore {
   readonly runs = this.runsResource.value;
   readonly isLoading = this.runsResource.isLoading;
   readonly hasError = this.runsResource.error;
+
+  /** Läuft können anderswo entstehen (Collect-Button in der Sidebar) — beim Betreten der Seite neu laden. */
+  reload(): void {
+    this.runsResource.reload();
+  }
 }

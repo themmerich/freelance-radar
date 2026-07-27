@@ -145,9 +145,10 @@ class CollectControllerTest {
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.newOffers").value(2))
 			.andExpect(jsonPath("$.totalSeen").value(1))
-			.andExpect(jsonPath("$.analyzedOffers").value(2))
-			.andExpect(jsonPath("$.inputTokens").value(1200))
-			.andExpect(jsonPath("$.outputTokens").value(300));
+			// 2 Angebote × 2 geseedete Profile: ein Abruf-Lauf analysiert gegen alle Profile.
+			.andExpect(jsonPath("$.analyzedOffers").value(4))
+			.andExpect(jsonPath("$.inputTokens").value(2400))
+			.andExpect(jsonPath("$.outputTokens").value(600));
 
 		mockMvc
 			.perform(get("/api/offers"))
@@ -159,7 +160,7 @@ class CollectControllerTest {
 			.andExpect(jsonPath("$[0].status").value("ANALYZED"))
 			.andExpect(jsonPath("$[0].country").value("AT"))
 			.andExpect(jsonPath("$[0].matchScore").value(85))
-			.andExpect(jsonPath("$[0].matchReason").value("Passt gut zum Profil (Standard)."))
+			.andExpect(jsonPath("$[0].matchReason").value("Passt gut zum Profil (Frontend Architect & Angular Lead)."))
 			.andExpect(jsonPath("$[0].skills", hasSize(2)))
 			.andExpect(jsonPath("$[0].skills[?(@.name=='Kotlin')].gap", contains(true)));
 
@@ -219,7 +220,7 @@ class CollectControllerTest {
 				agentMailBody(projectBlock("Senior Angular Entwickler (m/w/d)", 3026991L))
 			)
 		);
-		// Lauf 1 analysiert gegen das aktive Standard-Profil.
+		// Lauf 1 analysiert gegen beide geseedeten Profile.
 		mockMvc.perform(post("/api/runs")).andExpect(status().isCreated());
 
 		String created = mockMvc
@@ -259,9 +260,53 @@ class CollectControllerTest {
 		mockMvc
 			.perform(get("/api/offers"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[0].matchReason").value("Passt gut zum Profil (Standard)."));
+			.andExpect(jsonPath("$[0].matchReason").value("Passt gut zum Profil (Frontend Architect & Angular Lead)."));
 
 		mockMvc.perform(delete("/api/profiles/{id}", fullstackId)).andExpect(status().isNoContent());
+	}
+
+	@Test
+	void forceReanalyzeOverwritesAlreadyScoredOffersAfterAProfileChange() throws Exception {
+		MAILS.add(
+			new FetchedMail(
+				"<offer-1@freelancermap.de>",
+				"office@freelancermap.de",
+				"Angular - Anzahl neue Projekte: 1",
+				Instant.parse("2026-07-23T06:35:00Z"),
+				agentMailBody(projectBlock("Senior Angular Entwickler (m/w/d)", 3026991L))
+			)
+		);
+		// Lauf 1 analysiert das eine Angebot gegen beide geseedeten Profile — für keines bleibt danach ein Kandidat.
+		mockMvc.perform(post("/api/runs")).andExpect(status().isCreated());
+		mockMvc
+			.perform(get("/api/analyses/preview").param("profileId", "1"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.candidates").value(0));
+
+		// Ohne force bleibt eine Re-Analyse wirkungslos: das Angebot gilt schon als bewertet.
+		mockMvc
+			.perform(
+				post("/api/analyses")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(objectMapper.writeValueAsString(Map.of("profileId", 1)))
+			)
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.analyzedOffers").value(0));
+
+		// Mit force zählt es trotz vorhandenem Ergebnis wieder als Kandidat — das Profil hat sich geändert.
+		mockMvc
+			.perform(get("/api/analyses/preview").param("profileId", "1").param("force", "true"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.candidates").value(1));
+
+		mockMvc
+			.perform(
+				post("/api/analyses")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(objectMapper.writeValueAsString(Map.of("profileId", 1, "force", true)))
+			)
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.analyzedOffers").value(1));
 	}
 
 	@Test
@@ -290,8 +335,9 @@ class CollectControllerTest {
 				agentMailBody(projectBlock("Senior Angular Entwickler (m/w/d)", 3026991L))
 			)
 		);
-		// Erster Lauf analysiert das eine Angebot (1200/300 Tokens laut Stub-Analyzer), der
-		// zweite findet keine neue Mail mehr und analysiert nichts (0 Tokens).
+		// Erster Lauf analysiert das eine Angebot gegen beide geseedeten Profile (2 × 1200/300
+		// Tokens laut Stub-Analyzer), der zweite findet keine neue Mail mehr und analysiert
+		// nichts (0 Tokens).
 		mockMvc.perform(post("/api/runs")).andExpect(status().isCreated());
 		mockMvc.perform(post("/api/runs")).andExpect(status().isCreated());
 
@@ -300,6 +346,6 @@ class CollectControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$", hasSize(2)))
 			.andExpect(jsonPath("$[0].inputTokens").value(0))
-			.andExpect(jsonPath("$[1].inputTokens").value(1200));
+			.andExpect(jsonPath("$[1].inputTokens").value(2400));
 	}
 }

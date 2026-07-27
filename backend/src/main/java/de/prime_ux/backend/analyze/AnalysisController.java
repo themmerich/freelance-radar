@@ -20,7 +20,8 @@ import de.prime_ux.backend.profile.ProfileNotFoundException;
 @RequestMapping("/api/analyses")
 public class AnalysisController {
 
-	public record AnalyzeRequest(@NotNull Long profileId, Integer days) {}
+	/** {@code force}: auch bereits bewertete Angebote neu bewerten (z. B. nach einer Profiländerung). */
+	public record AnalyzeRequest(@NotNull Long profileId, Integer days, Boolean force) {}
 
 	private final AnalysisService analysis;
 
@@ -32,12 +33,16 @@ public class AnalysisController {
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public RunResponse reanalyze(@Valid @RequestBody AnalyzeRequest request) {
-		return RunResponse.from(analysis.reanalyze(request.profileId(), request.days()));
+		return RunResponse.from(analysis.reanalyze(request.profileId(), request.days(), Boolean.TRUE.equals(request.force())));
 	}
 
 	@GetMapping("/preview")
-	public AnalysisPreview preview(@RequestParam Long profileId, @RequestParam(required = false) Integer days) {
-		return analysis.preview(profileId, days);
+	public AnalysisPreview preview(
+		@RequestParam Long profileId,
+		@RequestParam(required = false) Integer days,
+		@RequestParam(required = false, defaultValue = "false") boolean force
+	) {
+		return analysis.preview(profileId, days, force);
 	}
 
 	@ExceptionHandler(ProfileNotFoundException.class)

@@ -46,6 +46,12 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 export class CostsPage {
   protected readonly store = inject(CostsStore);
 
+  constructor() {
+    // Läufe können anderswo entstehen (Collect-Button in der Sidebar) — sonst zeigt die
+    // Tabelle den Stand vom letzten Öffnen der Seite statt den aktuellen.
+    this.store.reload();
+  }
+
   protected readonly rows = computed<CostRow[]>(() =>
     this.store.runs().map((run) => ({
       id: run.id,

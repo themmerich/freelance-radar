@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
+import { DialogModule } from 'primeng/dialog';
 import { TagModule } from 'primeng/tag';
 
 import { ProfilesStore } from '../data-access/profiles-store';
@@ -24,7 +25,7 @@ type EditorMode = { kind: 'new' } | { kind: 'edit'; id: number; name: string } |
 
 @Component({
   selector: 'app-profile-page',
-  imports: [DecimalPipe, TranslocoDirective, ButtonModule, CardModule, TagModule, ChipList],
+  imports: [DecimalPipe, TranslocoDirective, ButtonModule, CardModule, DialogModule, TagModule, ChipList],
   template: `
     <main class="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <ng-container *transloco="let t">
@@ -144,6 +145,9 @@ type EditorMode = { kind: 'new' } | { kind: 'edit'; id: number; name: string } |
                   [disabled]="!draft().name.trim()"
                   (onClick)="save()"
                 />
+                @if (isEditing()) {
+                  <p-button type="button" [text]="true" [label]="t('profiles.editor.cancel')" (onClick)="cancelEdit()" />
+                }
                 @if (store.hasSaveError()) {
                   <p class="text-red-500" role="alert">{{ t('profiles.editor.saveError') }}</p>
                 }
@@ -192,6 +196,47 @@ type EditorMode = { kind: 'new' } | { kind: 'edit'; id: number; name: string } |
             </div>
           </div>
         </p-card>
+
+        <!-- Erscheint nach Anlegen/Speichern: das Profil hat sich geändert, bisherige
+             Bewertungen (auch schon analysierte Angebote) sind damit potenziell veraltet. -->
+        <p-dialog
+          [visible]="showReanalysisDialog()"
+          (visibleChange)="showReanalysisDialog.set($event)"
+          [modal]="true"
+          [header]="t('profiles.reanalysis.dialogTitle')"
+          [style]="{ width: '28rem' }"
+        >
+          <p class="text-sm text-surface-600 dark:text-surface-300">{{ t('profiles.reanalysis.dialogPrompt') }}</p>
+          <label class="mt-4 flex items-center gap-2 text-sm">
+            <span>{{ t('profiles.reanalysis.range') }}</span>
+            <select
+              class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
+              [value]="dialogDays() === null ? 'all' : dialogDays()"
+              (change)="onDialogDaysChange($event)"
+            >
+              <option value="all">{{ t('profiles.reanalysis.all') }}</option>
+              <option value="7">{{ t('profiles.reanalysis.days', { days: 7 }) }}</option>
+              <option value="30">{{ t('profiles.reanalysis.days', { days: 30 }) }}</option>
+              <option value="90">{{ t('profiles.reanalysis.days', { days: 90 }) }}</option>
+            </select>
+          </label>
+          @if (dialogPreview(); as p) {
+            <p class="mt-2 text-sm text-surface-600 dark:text-surface-300">
+              {{ t('profiles.reanalysis.preview', { candidates: p.candidates }) }}
+              · ≈{{ costCents(p.estimatedInputTokens, p.estimatedOutputTokens) | number: '1.1-2' }} ct
+            </p>
+          }
+          <ng-template #footer>
+            <p-button type="button" [text]="true" [label]="t('profiles.reanalysis.skip')" (onClick)="skipReanalysis()" />
+            <p-button
+              type="button"
+              icon="pi pi-sparkles"
+              [label]="t('profiles.reanalysis.run')"
+              [disabled]="dialogPreview()?.candidates === 0"
+              (onClick)="confirmReanalysis()"
+            />
+          </ng-template>
+        </p-dialog>
       </ng-container>
     </main>
   `,
@@ -217,6 +262,15 @@ export class ProfilePage {
   protected readonly days = signal<number | null>(null);
   protected readonly preview = signal<AnalysisPreview | null>(null);
 
+  /**
+   * Nach Anlegen/Speichern: fragt ab, ob (und ab wann) der Bestand mit dem neuen
+   * Profilstand neu bewertet werden soll — mit `force`, sonst gälten bereits
+   * bewertete Angebote als erledigt und blieben auf ihrem alten Ergebnis stehen.
+   */
+  protected readonly showReanalysisDialog = signal(false);
+  protected readonly dialogDays = signal<number | null>(null);
+  protected readonly dialogPreview = signal<AnalysisPreview | null>(null);
+
   /** Bearbeiten heißt überschreiben; in allen anderen Modi wird angelegt (leer oder als Kopie). */
   protected readonly isEditing = computed(() => this.mode().kind === 'edit');
 
@@ -240,6 +294,14 @@ export class ProfilePage {
     this.mode.set({ kind: 'edit', id: profile.id, name: profile.name });
     this.draft.set(draftOf(profile));
     this.loadPreview();
+  }
+
+  /** Verwirft unsicherte Änderungen: den Draft aus dem gespeicherten Stand neu aufbauen. */
+  protected cancelEdit(): void {
+    const profile = this.store.profiles().find((candidate) => candidate.id === this.selectedId());
+    if (profile) {
+      this.select(profile);
+    }
   }
 
   protected startNew(): void {
@@ -276,9 +338,12 @@ export class ProfilePage {
     if (id === null) {
       // Nach dem Anlegen auf das neue Profil umschalten, sonst legt ein zweiter
       // Klick erneut an — und der Name ist dann schon belegt.
-      this.store.create(this.draft(), (profile) => this.select(profile));
+      this.store.create(this.draft(), (profile) => {
+        this.select(profile);
+        this.openReanalysisDialog();
+      });
     } else {
-      this.store.update(id, this.draft());
+      this.store.update(id, this.draft(), () => this.openReanalysisDialog());
     }
   }
 
@@ -294,6 +359,43 @@ export class ProfilePage {
     const value = (event.target as HTMLSelectElement).value;
     this.days.set(value === 'all' ? null : Number(value));
     this.loadPreview();
+  }
+
+  private openReanalysisDialog(): void {
+    this.dialogDays.set(null);
+    this.loadDialogPreview();
+    this.showReanalysisDialog.set(true);
+  }
+
+  protected onDialogDaysChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.dialogDays.set(value === 'all' ? null : Number(value));
+    this.loadDialogPreview();
+  }
+
+  protected confirmReanalysis(): void {
+    const id = this.selectedId();
+    if (id !== null) {
+      this.store.reanalyze(id, this.dialogDays(), true);
+      this.loadPreview();
+    }
+    this.showReanalysisDialog.set(false);
+  }
+
+  protected skipReanalysis(): void {
+    this.showReanalysisDialog.set(false);
+  }
+
+  private loadDialogPreview(): void {
+    const id = this.selectedId();
+    if (id === null) {
+      this.dialogPreview.set(null);
+      return;
+    }
+    this.store
+      .preview(id, this.dialogDays(), true)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((preview) => this.dialogPreview.set(preview));
   }
 
   protected patch(field: TextField, event: Event): void {

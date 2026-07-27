@@ -44,6 +44,7 @@
       "modeEdit": "Bearbeiten",
       "modeNew": "Neu",
       "save": "Speichern",
+      "cancel": "Abbrechen",
       "create": "Anlegen",
       "saveError": "Speichern fehlgeschlagen."
     },
@@ -54,7 +55,16 @@
       "days": "Letzte {{days}} Tage",
       "preview": "{{candidates}} Angebote offen",
       "run": "Bewerten",
-      "done": "{{analyzed}} bewertet"
+      "done": "{{analyzed}} bewertet",
+      "dialogTitle": "Angebote neu bewerten?",
+      "dialogPrompt": "Das Profil wurde geändert. Sollen vorhandene Angebote damit neu bewertet werden — und wenn ja, ab wann?",
+      "skip": "Überspringen",
+      "error": "Die Neu-Analyse ist fehlgeschlagen.",
+      "toast": {
+        "successSummary": "Neu-Analyse abgeschlossen",
+        "successDetail": "{{analyzed}} Angebote neu bewertet",
+        "errorSummary": "Neu-Analyse fehlgeschlagen"
+      }
     }
   },
   "offers": {
