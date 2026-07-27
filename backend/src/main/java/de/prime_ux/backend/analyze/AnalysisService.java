@@ -78,7 +78,7 @@ public class AnalysisService {
 		long inputTokens = 0;
 		long outputTokens = 0;
 		for (Profile profile : profiles.findAll()) {
-			AnalysisOutcome outcome = analyze(profile, Instant.EPOCH, false);
+			AnalysisOutcome outcome = analyze(profile, Instant.EPOCH, false, true);
 			analyzed += outcome.analyzed();
 			inputTokens += outcome.inputTokens();
 			outputTokens += outcome.outputTokens();
@@ -96,13 +96,17 @@ public class AnalysisService {
 	 * Ohne {@code force} zählen nur noch unbewertete Angebote (die alte „Rest auffüllen"-Funktion);
 	 * mit {@code force} auch bereits bewertete — für den Fall, dass sich das Profil geändert hat
 	 * und seine bisherigen Ergebnisse damit veraltet sind.
+	 *
+	 * <p>Der gesamte Bestand (kein Zeitfenster) läuft bewusst ohne Kostendeckel durch: die
+	 * Oberfläche zeigt vorher die geschätzten Kosten und lässt sie bestätigen. Ein Zeitfenster
+	 * bleibt gedeckelt.
 	 */
 	@Transactional
 	public Run reanalyze(Long profileId, Integer days, boolean force) {
 		Profile profile = profiles.findById(profileId).orElseThrow(() -> new ProfileNotFoundException(profileId));
 		String note = (force ? "reanalyse (erzwungen) profil=" : "reanalyse profil=") + profile.getName() + (days == null ? "" : ", tage=" + days);
 		Run run = runs.save(new Run(0, 0, note));
-		AnalysisOutcome outcome = analyze(profile, since(days), force);
+		AnalysisOutcome outcome = analyze(profile, since(days), force, days != null);
 		run.setAnalyzedOffers(outcome.analyzed());
 		run.setInputTokens(outcome.inputTokens());
 		run.setOutputTokens(outcome.outputTokens());
@@ -145,17 +149,38 @@ public class AnalysisService {
 		return force ? offers.findPrimarySince(since) : offers.findUnanalyzedPrimarySince(profileId, since);
 	}
 
-	private AnalysisOutcome analyze(Profile profile, Instant since, boolean force) {
+	/**
+	 * Bewertet die Kandidaten in Batches von radar.analysis.max-offers-per-run. Mit
+	 * {@code capped} bleibt es bei einem Batch, der Rest wird als offen gemeldet; ohne
+	 * Deckel laufen alle Kandidaten durch — weiterhin batchweise, denn ein Request mit
+	 * allen Angeboten würde das Antwort-Token-Limit des Modells sprengen.
+	 */
+	private AnalysisOutcome analyze(Profile profile, Instant since, boolean force, boolean capped) {
 		List<Offer> candidates = candidatesFor(profile.getId(), since, force);
 		if (candidates.isEmpty()) {
 			return AnalysisOutcome.EMPTY;
 		}
 
-		// Kostendeckel: Abbruch mit Hinweis statt Kostenexplosion.
-		List<Offer> batch = candidates.subList(0, Math.min(candidates.size(), properties.maxOffersPerRun()));
-		AnalysisResult result = analyzer.analyze(profile, batch);
-		Map<Long, Offer> byId = batch.stream().collect(Collectors.toMap(Offer::getId, Function.identity()));
+		int batchSize = properties.maxOffersPerRun();
+		int limit = capped ? Math.min(candidates.size(), batchSize) : candidates.size();
 
+		int analyzed = 0;
+		long inputTokens = 0;
+		long outputTokens = 0;
+		for (int start = 0; start < limit; start += batchSize) {
+			List<Offer> batch = candidates.subList(start, Math.min(start + batchSize, limit));
+			AnalysisResult result = analyzer.analyze(profile, batch);
+			inputTokens += result.inputTokens();
+			outputTokens += result.outputTokens();
+			analyzed += applyBatch(profile, batch, result);
+		}
+
+		return new AnalysisOutcome(analyzed, inputTokens, outputTokens, candidates.size() - limit);
+	}
+
+	/** Übernimmt die Bewertungen eines Batches; liefert die Zahl der zugeordneten Angebote. */
+	private int applyBatch(Profile profile, List<Offer> batch, AnalysisResult result) {
+		Map<Long, Offer> byId = batch.stream().collect(Collectors.toMap(Offer::getId, Function.identity()));
 		int analyzed = 0;
 		for (OfferAssessment assessment : result.assessments()) {
 			Offer offer = byId.get(assessment.offerId());
@@ -165,9 +190,7 @@ public class AnalysisService {
 			apply(offer, profile, assessment);
 			analyzed++;
 		}
-
-		int leftover = candidates.size() - batch.size();
-		return new AnalysisOutcome(analyzed, result.inputTokens(), result.outputTokens(), leftover);
+		return analyzed;
 	}
 
 	private void apply(Offer offer, Profile profile, OfferAssessment assessment) {

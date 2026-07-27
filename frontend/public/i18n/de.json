@@ -15,6 +15,7 @@
     "list": {
       "delete": "Profil {{name}} löschen",
       "duplicate": "Profil {{name}} kopieren",
+      "score": "Angebote gegen Profil {{name}} bewerten",
       "copyName": "{{name}} (Kopie)",
       "copyNameNumbered": "{{name}} (Kopie {{count}})",
       "new": "Neues Profil"
@@ -46,14 +47,19 @@
       "create": "Anlegen",
       "saveError": "Speichern fehlgeschlagen."
     },
+    "score": {
+      "title": "Bewerten · {{name}}",
+      "close": "Schließen",
+      "cancel": "Abbrechen",
+      "confirmTitle": "Gesamten Bestand bewerten?",
+      "confirmWarning": "Alle {{candidates}} offenen Angebote werden in einem Zug bewertet — der übliche Deckel pro Lauf greift hier nicht. Das kann dauern und entsprechend kosten."
+    },
     "reanalysis": {
-      "title": "Bestand gegen dieses Profil bewerten",
       "range": "Zeitraum",
       "all": "Gesamter Bestand",
       "days": "Letzte {{days}} Tage",
       "preview": "{{candidates}} Angebote offen",
       "run": "Bewerten",
-      "done": "{{analyzed}} bewertet",
       "dialogTitle": "Angebote neu bewerten?",
       "dialogPrompt": "Das Profil wurde geändert. Sollen vorhandene Angebote damit neu bewertet werden — und wenn ja, ab wann?",
       "skip": "Überspringen",

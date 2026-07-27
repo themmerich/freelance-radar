@@ -12,6 +12,7 @@ import de.prime_ux.backend.profile.ProfileRepository;
 import de.prime_ux.backend.run.Run;
 import de.prime_ux.backend.run.RunRepository;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -101,6 +102,35 @@ class AnalysisServiceTest {
 		assertThat(analyses.findById(new OfferAnalysisId(oldest.getId(), otherProfileId)))
 			.hasValueSatisfying(result -> assertThat(result.getMatchScore()).isEqualTo(70));
 		assertThat(analyses.findById(new OfferAnalysisId(newest.getId(), otherProfileId))).isEmpty();
+	}
+
+	@Test
+	void scoresTheEntireBacklogWithoutTheCap() {
+		Offer first = offers.save(newOffer("<first@fm.de>", "2026-07-23T06:00:00Z"));
+		Offer second = offers.save(newOffer("<second@fm.de>", "2026-07-23T07:00:00Z"));
+		Offer third = offers.save(newOffer("<third@fm.de>", "2026-07-23T08:00:00Z"));
+
+		Run run = analysis.reanalyze(activeProfileId, null, false);
+
+		// Ohne Zeitfenster greift der Deckel (hier 1) nicht: alle drei werden bewertet,
+		// aber in Batches — ein Analyzer-Aufruf je Angebot, also 3× die Tokens des Stubs.
+		assertThat(run.getAnalyzedOffers()).isEqualTo(3);
+		assertThat(run.getInputTokens()).isEqualTo(1500);
+		assertThat(run.getNote()).doesNotContain("deckel=");
+		for (Offer offer : List.of(first, second, third)) {
+			assertThat(analyses.findById(new OfferAnalysisId(offer.getId(), activeProfileId))).isPresent();
+		}
+	}
+
+	@Test
+	void keepsTheCapForATimeWindow() {
+		offers.save(newOffer("<recent@fm.de>", Instant.now().minus(2, ChronoUnit.HOURS).toString()));
+		offers.save(newOffer("<newer@fm.de>", Instant.now().minus(1, ChronoUnit.HOURS).toString()));
+
+		Run run = analysis.reanalyze(activeProfileId, 7, false);
+
+		assertThat(run.getAnalyzedOffers()).isEqualTo(1);
+		assertThat(run.getNote()).contains("deckel=1", "offen=1");
 	}
 
 	@Test
