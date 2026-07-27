@@ -30,172 +30,183 @@ type EditorMode = { kind: 'new' } | { kind: 'edit'; id: number; name: string } |
     <main class="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <ng-container *transloco="let t">
         <p-card [header]="t('profiles.title')">
-          <div class="grid gap-8 lg:grid-cols-[20rem_1fr]">
-            <div class="flex flex-col gap-3">
-              @for (profile of store.profiles(); track profile.id) {
-                <div
-                  class="flex items-center justify-between gap-2 rounded border p-3"
-                  [class.border-primary]="profile.id === selectedId()"
-                  [class.border-surface-200]="profile.id !== selectedId()"
-                  [class.dark:border-surface-700]="profile.id !== selectedId()"
+          <div class="flex flex-col gap-3">
+            @for (profile of store.profiles(); track profile.id) {
+              <div
+                class="flex items-center justify-between gap-2 rounded border p-3"
+                [class.border-primary]="profile.id === selectedId()"
+                [class.border-surface-200]="profile.id !== selectedId()"
+                [class.dark:border-surface-700]="profile.id !== selectedId()"
+              >
+                <button
+                  type="button"
+                  class="flex flex-1 cursor-pointer flex-col gap-1 text-left"
+                  (click)="select(profile); showEditorDialog.set(true)"
                 >
-                  <button type="button" class="flex flex-1 cursor-pointer flex-col gap-1 text-left" (click)="select(profile)">
-                    <span class="font-medium">{{ profile.name }}</span>
-                    <span class="text-sm text-surface-500">{{ profile.role ?? '—' }}</span>
-                  </button>
-                  <!-- Auch für das aktive Profil: die Kopiervorlage ist meist gerade das aktive. -->
+                  <span class="font-medium">{{ profile.name }}</span>
+                  <span class="text-sm text-surface-500">{{ profile.role ?? '—' }}</span>
+                </button>
+                <!-- Auch für das aktive Profil: die Kopiervorlage ist meist gerade das aktive. -->
+                <p-button
+                  type="button"
+                  size="small"
+                  icon="pi pi-copy"
+                  [text]="true"
+                  [ariaLabel]="t('profiles.list.duplicate', { name: profile.name })"
+                  (onClick)="duplicate(profile)"
+                />
+                @if (profile.active) {
+                  <p-tag severity="success" [value]="t('profiles.list.active')" />
+                } @else {
                   <p-button
                     type="button"
                     size="small"
-                    icon="pi pi-copy"
                     [text]="true"
-                    [ariaLabel]="t('profiles.list.duplicate', { name: profile.name })"
-                    (onClick)="duplicate(profile)"
+                    [label]="t('profiles.list.activate')"
+                    (onClick)="store.activate(profile.id)"
                   />
-                  @if (profile.active) {
-                    <p-tag severity="success" [value]="t('profiles.list.active')" />
-                  } @else {
-                    <p-button
-                      type="button"
-                      size="small"
-                      [text]="true"
-                      [label]="t('profiles.list.activate')"
-                      (onClick)="store.activate(profile.id)"
-                    />
-                    <p-button
-                      type="button"
-                      size="small"
-                      icon="pi pi-trash"
-                      severity="danger"
-                      [text]="true"
-                      [ariaLabel]="t('profiles.list.delete', { name: profile.name })"
-                      (onClick)="store.remove(profile.id)"
-                    />
-                  }
-                </div>
-              }
-              <p-button type="button" icon="pi pi-plus" [text]="true" [label]="t('profiles.list.new')" (onClick)="startNew()" />
-            </div>
-
-            <div class="flex flex-col gap-6">
-              <!-- Ohne die Kopfzeile sieht Bearbeiten genauso aus wie Anlegen/Kopieren. -->
-              <div class="flex items-center gap-3 border-b border-surface-200 pb-3 dark:border-surface-700">
-                <h3 class="text-lg font-medium">
-                  @if (isEditing()) {
-                    {{ editedName() }}
-                  } @else if (copySource()) {
-                    {{ t('profiles.editor.copyOf', { name: copySource() }) }}
-                  } @else {
-                    {{ t('profiles.editor.newTitle') }}
-                  }
-                </h3>
-                <p-tag
-                  [severity]="isEditing() ? 'secondary' : 'info'"
-                  [value]="isEditing() ? t('profiles.editor.modeEdit') : t('profiles.editor.modeNew')"
-                />
-              </div>
-
-              <div class="grid gap-4 sm:grid-cols-2">
-                @for (field of textFields; track field) {
-                  <label class="flex flex-col gap-1 text-sm">
-                    <span class="font-medium">{{ t('profiles.editor.' + field) }}</span>
-                    <input
-                      type="text"
-                      class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
-                      [value]="draft()[field] ?? ''"
-                      (input)="patch(field, $event)"
-                    />
-                  </label>
+                  <p-button
+                    type="button"
+                    size="small"
+                    icon="pi pi-trash"
+                    severity="danger"
+                    [text]="true"
+                    [ariaLabel]="t('profiles.list.delete', { name: profile.name })"
+                    (onClick)="store.remove(profile.id)"
+                  />
                 }
               </div>
-
-              @for (category of skillCategories; track category) {
-                <app-chip-list
-                  [label]="t('profiles.categories.' + category)"
-                  [items]="draft().skills[category] ?? []"
-                  [inputId]="'skills-' + category"
-                  (add)="addSkill(category, $event)"
-                  (remove)="removeSkill(category, $event)"
-                />
-              }
-
-              <app-chip-list
-                [label]="t('profiles.editor.strongSignals')"
-                [items]="draft().strongSignals"
-                inputId="strong-signals"
-                severity="info"
-                (add)="addSignal('strongSignals', $event)"
-                (remove)="removeSignal('strongSignals', $event)"
-              />
-              <app-chip-list
-                [label]="t('profiles.editor.weakSignals')"
-                [items]="draft().weakSignals"
-                inputId="weak-signals"
-                severity="danger"
-                (add)="addSignal('weakSignals', $event)"
-                (remove)="removeSignal('weakSignals', $event)"
-              />
-
-              <div class="flex items-center gap-4">
-                <p-button
-                  type="button"
-                  [icon]="isEditing() ? 'pi pi-save' : 'pi pi-plus'"
-                  [label]="isEditing() ? t('profiles.editor.save') : t('profiles.editor.create')"
-                  [loading]="store.isSaving()"
-                  [disabled]="!draft().name.trim()"
-                  (onClick)="save()"
-                />
-                @if (isEditing()) {
-                  <p-button type="button" [text]="true" [label]="t('profiles.editor.cancel')" (onClick)="cancelEdit()" />
-                }
-                @if (store.hasSaveError()) {
-                  <p class="text-red-500" role="alert">{{ t('profiles.editor.saveError') }}</p>
-                }
-              </div>
-
-              @if (selectedId() !== null) {
-                <div class="flex flex-col gap-3 rounded border border-surface-200 p-4 dark:border-surface-700">
-                  <h3 class="font-medium">{{ t('profiles.reanalysis.title') }}</h3>
-                  <div class="flex flex-wrap items-center gap-4 text-sm">
-                    <label class="flex items-center gap-2">
-                      <span>{{ t('profiles.reanalysis.range') }}</span>
-                      <select
-                        class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
-                        [value]="days() === null ? 'all' : days()"
-                        (change)="onDaysChange($event)"
-                      >
-                        <option value="all">{{ t('profiles.reanalysis.all') }}</option>
-                        <option value="7">{{ t('profiles.reanalysis.days', { days: 7 }) }}</option>
-                        <option value="30">{{ t('profiles.reanalysis.days', { days: 30 }) }}</option>
-                        <option value="90">{{ t('profiles.reanalysis.days', { days: 90 }) }}</option>
-                      </select>
-                    </label>
-                    @if (preview(); as p) {
-                      <span>
-                        {{ t('profiles.reanalysis.preview', { candidates: p.candidates }) }}
-                        · ≈{{ costCents(p.estimatedInputTokens, p.estimatedOutputTokens) | number: '1.1-2' }} ct
-                      </span>
-                    }
-                    <p-button
-                      type="button"
-                      icon="pi pi-sparkles"
-                      [label]="t('profiles.reanalysis.run')"
-                      [loading]="store.isSaving()"
-                      [disabled]="preview()?.candidates === 0"
-                      (onClick)="reanalyze()"
-                    />
-                  </div>
-                  @if (store.lastReanalysisRun(); as run) {
-                    <p class="text-sm text-surface-600 dark:text-surface-300">
-                      {{ t('profiles.reanalysis.done', { analyzed: run.analyzedOffers }) }}
-                      · ≈{{ costCents(run.inputTokens, run.outputTokens) | number: '1.1-2' }} ct
-                    </p>
-                  }
-                </div>
-              }
-            </div>
+            }
+            <p-button type="button" icon="pi pi-plus" [text]="true" [label]="t('profiles.list.new')" (onClick)="startNew()" />
           </div>
         </p-card>
+
+        <!-- Formular zum Anlegen/Bearbeiten/Kopieren — als Dialog, damit die Profilliste
+             darunter sichtbar bleibt und der Editor nicht permanent Platz beansprucht. -->
+        <p-dialog
+          [visible]="showEditorDialog()"
+          (visibleChange)="showEditorDialog.set($event)"
+          [modal]="true"
+          [style]="{ width: '52rem', maxWidth: '95vw' }"
+          [contentStyle]="{ 'max-height': '75vh', 'overflow-y': 'auto' }"
+        >
+          <ng-template #header>
+            <div class="flex items-center gap-3">
+              <h3 class="text-lg font-medium">
+                @if (isEditing()) {
+                  {{ editedName() }}
+                } @else if (copySource()) {
+                  {{ t('profiles.editor.copyOf', { name: copySource() }) }}
+                } @else {
+                  {{ t('profiles.editor.newTitle') }}
+                }
+              </h3>
+              <p-tag
+                [severity]="isEditing() ? 'secondary' : 'info'"
+                [value]="isEditing() ? t('profiles.editor.modeEdit') : t('profiles.editor.modeNew')"
+              />
+            </div>
+          </ng-template>
+
+          <div class="flex flex-col gap-6">
+            <div class="grid gap-4 sm:grid-cols-2">
+              @for (field of textFields; track field) {
+                <label class="flex flex-col gap-1 text-sm">
+                  <span class="font-medium">{{ t('profiles.editor.' + field) }}</span>
+                  <input
+                    type="text"
+                    class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
+                    [value]="draft()[field] ?? ''"
+                    (input)="patch(field, $event)"
+                  />
+                </label>
+              }
+            </div>
+
+            @for (category of skillCategories; track category) {
+              <app-chip-list
+                [label]="t('profiles.categories.' + category)"
+                [items]="draft().skills[category] ?? []"
+                [inputId]="'skills-' + category"
+                (add)="addSkill(category, $event)"
+                (remove)="removeSkill(category, $event)"
+              />
+            }
+
+            <app-chip-list
+              [label]="t('profiles.editor.strongSignals')"
+              [items]="draft().strongSignals"
+              inputId="strong-signals"
+              severity="info"
+              (add)="addSignal('strongSignals', $event)"
+              (remove)="removeSignal('strongSignals', $event)"
+            />
+            <app-chip-list
+              [label]="t('profiles.editor.weakSignals')"
+              [items]="draft().weakSignals"
+              inputId="weak-signals"
+              severity="danger"
+              (add)="addSignal('weakSignals', $event)"
+              (remove)="removeSignal('weakSignals', $event)"
+            />
+
+            <div class="flex items-center gap-4">
+              <p-button
+                type="button"
+                [icon]="isEditing() ? 'pi pi-save' : 'pi pi-plus'"
+                [label]="isEditing() ? t('profiles.editor.save') : t('profiles.editor.create')"
+                [loading]="store.isSaving()"
+                [disabled]="!draft().name.trim()"
+                (onClick)="save()"
+              />
+              <p-button type="button" [text]="true" [label]="t('profiles.editor.cancel')" (onClick)="closeEditor()" />
+              @if (store.hasSaveError()) {
+                <p class="text-red-500" role="alert">{{ t('profiles.editor.saveError') }}</p>
+              }
+            </div>
+
+            @if (selectedId() !== null) {
+              <div class="flex flex-col gap-3 rounded border border-surface-200 p-4 dark:border-surface-700">
+                <h3 class="font-medium">{{ t('profiles.reanalysis.title') }}</h3>
+                <div class="flex flex-wrap items-center gap-4 text-sm">
+                  <label class="flex items-center gap-2">
+                    <span>{{ t('profiles.reanalysis.range') }}</span>
+                    <select
+                      class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
+                      [value]="days() === null ? 'all' : days()"
+                      (change)="onDaysChange($event)"
+                    >
+                      <option value="all">{{ t('profiles.reanalysis.all') }}</option>
+                      <option value="7">{{ t('profiles.reanalysis.days', { days: 7 }) }}</option>
+                      <option value="30">{{ t('profiles.reanalysis.days', { days: 30 }) }}</option>
+                      <option value="90">{{ t('profiles.reanalysis.days', { days: 90 }) }}</option>
+                    </select>
+                  </label>
+                  @if (preview(); as p) {
+                    <span>
+                      {{ t('profiles.reanalysis.preview', { candidates: p.candidates }) }}
+                      · ≈{{ costCents(p.estimatedInputTokens, p.estimatedOutputTokens) | number: '1.1-2' }} ct
+                    </span>
+                  }
+                  <p-button
+                    type="button"
+                    icon="pi pi-sparkles"
+                    [label]="t('profiles.reanalysis.run')"
+                    [loading]="store.isSaving()"
+                    [disabled]="preview()?.candidates === 0"
+                    (onClick)="reanalyze()"
+                  />
+                </div>
+                @if (store.lastReanalysisRun(); as run) {
+                  <p class="text-sm text-surface-600 dark:text-surface-300">
+                    {{ t('profiles.reanalysis.done', { analyzed: run.analyzedOffers }) }}
+                    · ≈{{ costCents(run.inputTokens, run.outputTokens) | number: '1.1-2' }} ct
+                  </p>
+                }
+              </div>
+            }
+          </div>
+        </p-dialog>
 
         <!-- Erscheint nach Anlegen/Speichern: das Profil hat sich geändert, bisherige
              Bewertungen (auch schon analysierte Angebote) sind damit potenziell veraltet. -->
@@ -262,6 +273,9 @@ export class ProfilePage {
   protected readonly days = signal<number | null>(null);
   protected readonly preview = signal<AnalysisPreview | null>(null);
 
+  /** Das Anlegen-/Bearbeiten-Formular lebt in einem Dialog statt permanent auf der Seite. */
+  protected readonly showEditorDialog = signal(false);
+
   /**
    * Nach Anlegen/Speichern: fragt ab, ob (und ab wann) der Bestand mit dem neuen
    * Profilstand neu bewertet werden soll — mit `force`, sonst gälten bereits
@@ -296,18 +310,16 @@ export class ProfilePage {
     this.loadPreview();
   }
 
-  /** Verwirft unsicherte Änderungen: den Draft aus dem gespeicherten Stand neu aufbauen. */
-  protected cancelEdit(): void {
-    const profile = this.store.profiles().find((candidate) => candidate.id === this.selectedId());
-    if (profile) {
-      this.select(profile);
-    }
+  /** Schließt den Editor-Dialog, ohne zu speichern — der Draft wird beim nächsten Öffnen frisch aufgebaut. */
+  protected closeEditor(): void {
+    this.showEditorDialog.set(false);
   }
 
   protected startNew(): void {
     this.mode.set({ kind: 'new' });
     this.draft.set(emptyDraft());
     this.preview.set(null);
+    this.showEditorDialog.set(true);
   }
 
   /**
@@ -319,6 +331,7 @@ export class ProfilePage {
     this.mode.set({ kind: 'copy', source: profile.name });
     this.preview.set(null);
     this.draft.set({ ...draftOf(profile), name: this.freeCopyName(profile.name) });
+    this.showEditorDialog.set(true);
   }
 
   /** `name` ist in der DB unique — solange hochzählen, bis der Vorschlag frei ist. */
