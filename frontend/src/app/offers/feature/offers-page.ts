@@ -12,13 +12,12 @@ import { ThemeStore } from '../../shared/data-access/theme-store';
 import { countBySource, kpis, offersPerDay, scoreHistogram, topSkills, triggersPerAgent } from '../util/offer-stats';
 import { KpiTiles } from '../ui/kpi-tiles';
 import { OfferCharts } from '../ui/offer-charts';
-import { OfferTable, OfferRow } from '../ui/offer-table';
 
 const TOP_SKILL_LIMIT = 10;
 
 @Component({
   selector: 'app-offers-page',
-  imports: [DatePipe, DecimalPipe, TranslocoDirective, ButtonModule, CardModule, ProgressSpinnerModule, KpiTiles, OfferCharts, OfferTable],
+  imports: [DatePipe, DecimalPipe, TranslocoDirective, ButtonModule, CardModule, ProgressSpinnerModule, KpiTiles, OfferCharts],
   template: `
     <main class="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <ng-container *transloco="let t">
@@ -64,41 +63,6 @@ const TOP_SKILL_LIMIT = 10;
                 [yellowThreshold]="settings.yellowThreshold()"
                 [dark]="theme.dark()"
               />
-
-              <div class="flex flex-wrap items-center gap-6 text-sm">
-                <label class="flex items-center gap-2">
-                  <span>🟢 {{ t('offers.settings.greenFrom') }}</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    class="w-20 rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
-                    [value]="settings.greenThreshold()"
-                    (change)="onGreenChange($event)"
-                  />
-                </label>
-                <label class="flex items-center gap-2">
-                  <span>🟡 {{ t('offers.settings.yellowFrom') }}</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    class="w-20 rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
-                    [value]="settings.yellowThreshold()"
-                    (change)="onYellowChange($event)"
-                  />
-                </label>
-                <label class="flex items-center gap-2">
-                  <input type="checkbox" [checked]="settings.collapseDuplicates()" (change)="onCollapseChange($event)" />
-                  <span>{{ t('offers.settings.collapseDuplicates') }}</span>
-                </label>
-              </div>
-
-              <app-offer-table
-                [offers]="rows()"
-                [greenThreshold]="settings.greenThreshold()"
-                [yellowThreshold]="settings.yellowThreshold()"
-              />
             }
           </div>
         </p-card>
@@ -122,41 +86,4 @@ export class OffersPage {
   protected readonly skills = computed(() => topSkills(this.primaryOffers(), TOP_SKILL_LIMIT, false));
   protected readonly gaps = computed(() => topSkills(this.primaryOffers(), TOP_SKILL_LIMIT, true));
   protected readonly histogram = computed(() => scoreHistogram(this.primaryOffers()));
-
-  // Duplikat-Toggle: zusammengefasst (nur primäre, mit Badge) oder alle Zeilen.
-  protected readonly rows = computed<OfferRow[]>(() => {
-    const offers = this.settings.settings().collapseDuplicates ? this.primaryOffers() : this.store.offers();
-    return offers.map((offer) => ({
-      id: offer.id,
-      receivedAt: offer.receivedAt,
-      sourceType: offer.sourceType,
-      agentName: offer.agentName,
-      title: offer.projectTitle ?? offer.subject,
-      company: offer.company,
-      location: offer.location,
-      country: offer.country,
-      remote: offer.remote,
-      dupCount: offer.dupCount,
-      projectUrl: offer.projectUrl,
-      matchScore: offer.matchScore,
-      matchReason: offer.matchReason,
-      rate: offer.rate,
-      startDate: offer.startDate,
-      duration: offer.duration,
-      skills: offer.skills,
-      status: offer.status,
-    }));
-  });
-
-  protected onGreenChange(event: Event): void {
-    this.settings.setGreenThreshold(Number((event.target as HTMLInputElement).value));
-  }
-
-  protected onYellowChange(event: Event): void {
-    this.settings.setYellowThreshold(Number((event.target as HTMLInputElement).value));
-  }
-
-  protected onCollapseChange(event: Event): void {
-    this.settings.setCollapseDuplicates((event.target as HTMLInputElement).checked);
-  }
 }

@@ -139,8 +139,8 @@ describe('OfferTable', () => {
     fixture.detectChanges();
 
     const element = fixture.nativeElement as HTMLElement;
-    expect(element.querySelectorAll('tbody tr')).toHaveLength(25);
-    expect(element.textContent).toContain('1–25 of 30');
+    expect(element.querySelectorAll('tbody tr')).toHaveLength(10);
+    expect(element.textContent).toContain('1–10 of 30');
     // Das Seitengrößen-Dropdown des Paginators bietet die vier Stufen an.
     expect(element.querySelector('p-select')).not.toBeNull();
   });

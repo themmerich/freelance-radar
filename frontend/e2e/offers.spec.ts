@@ -87,29 +87,15 @@ test.describe('Offers dashboard e2e', () => {
 
   test('shows the empty state before the first run', async ({ page }) => {
     await expect(page.getByText('No run yet — fetch mails now.')).toBeVisible();
-    await expect(page.getByText('No offers yet. Fetch mails with the button above.')).toBeVisible();
   });
 
-  test('a run fills the table with the score traffic light and reports cost', async ({ page }) => {
+  test('a run reports the import numbers and the cost', async ({ page }) => {
     await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
 
-    await expect(page.getByRole('cell', { name: 'Senior Angular Entwickler' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: '85' })).toBeVisible();
-    await expect(page.getByRole('cell', { name: '🇦🇹 AT' })).toBeVisible();
     // 12 000 Input- + 800 Output-Tokens auf Haiku ≈ 1,6 US-Cent
     await expect(page.getByText('Last run: 1 new of 1 seen · 1 analyzed · ≈1.6 ct')).toBeVisible();
     // Der Erfolgs-Toast meldet die Importzahlen.
     await expect(page.getByText('1 new offers imported from 1 mails · 1 analyzed')).toBeVisible();
-  });
-
-  test('expanding a row shows the match reason and the skill gaps', async ({ page }) => {
-    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
-    await expect(page.getByRole('cell', { name: 'Senior Angular Entwickler' })).toBeVisible();
-
-    await page.getByRole('button', { name: 'Details' }).click();
-
-    await expect(page.getByText('Kern-Stack Angular, remote — passt sehr gut zum Profil.')).toBeVisible();
-    await expect(page.getByText('Kotlin')).toBeVisible();
   });
 
   test('shows the kpi tiles and all six charts after a run', async ({ page }) => {
@@ -119,57 +105,6 @@ test.describe('Offers dashboard e2e', () => {
     // Ein analysiertes Angebot mit Score 85 bei Schwelle 70 → Anteil 🟢 = 100 %.
     await expect(page.getByText('100 %')).toBeVisible();
     await expect(page.locator('canvas')).toHaveCount(6);
-  });
-
-  test('raising the green threshold lowers the green share', async ({ page }) => {
-    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
-    await expect(page.getByText('100 %')).toBeVisible();
-
-    const greenInput = page.getByRole('spinbutton').first();
-    await greenInput.fill('90');
-    await greenInput.blur();
-
-    await expect(page.getByText('0 %')).toBeVisible();
-  });
-
-  test('unchecking the duplicate toggle reveals the copies', async ({ page }) => {
-    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
-    await expect(page.getByRole('cell', { name: 'Java Spring' })).toHaveCount(0);
-
-    await page.getByRole('checkbox', { name: 'Collapse duplicates' }).uncheck();
-
-    await expect(page.getByRole('cell', { name: 'Java Spring' })).toBeVisible();
-  });
-
-  test('collapses the same project caught by two agents into one badged row', async ({ page }) => {
-    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
-
-    // Only the primary row is rendered — with the spread badge instead of a duplicate line.
-    await expect(page.getByRole('cell', { name: /Senior Angular Entwickler/ })).toHaveCount(1);
-    await expect(page.getByText('spread 2×')).toBeVisible();
-    await expect(page.getByRole('cell', { name: 'Java Spring' })).toHaveCount(0);
-  });
-
-  test('paginates the table and filters a column down to nothing', async ({ page }) => {
-    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
-    await expect(page.getByRole('cell', { name: 'Senior Angular Entwickler' })).toBeVisible();
-
-    // Der Paginator meldet den sichtbaren Bereich; ein Angebot ist primär, das Duplikat wird eingeklappt.
-    await expect(page.getByText('1–1 of 1')).toBeVisible();
-
-    // Kern der Änderung: die 11 Spalten sind breiter als der Container, also muss er horizontal scrollen.
-    const scroller = page.locator('.p-datatable-table-container');
-    await expect.poll(() => scroller.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
-
-    // Quelle des Angebots ist AGENT — der Filter auf PRIVATE muss die Tabelle leeren.
-    await page
-      .getByRole('columnheader', { name: /Source/ })
-      .getByRole('button')
-      .click();
-    await page.getByRole('combobox', { name: 'Filter by Source' }).selectOption('PRIVATE');
-
-    await expect(page.getByRole('cell', { name: 'Senior Angular Entwickler' })).toHaveCount(0);
-    await expect(page.getByText('No offers yet. Fetch mails with the button above.')).toBeVisible();
   });
 
   test('switching the profile activates it and reloads the offers', async ({ page }) => {

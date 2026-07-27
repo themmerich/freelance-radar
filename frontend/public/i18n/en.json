@@ -6,6 +6,7 @@
     "themeLight": "Switch to light mode",
     "themeDark": "Switch to dark mode",
     "dashboard": "Dashboard",
+    "offers": "Offers",
     "profiles": "Profiles"
   },
   "profiles": {
@@ -57,6 +58,7 @@
   },
   "offers": {
     "title": "Freelance Radar",
+    "listTitle": "Offers",
     "profile": "Profile",
     "collect": "Fetch & analyze mails",
     "lastRun": "Last run: {{newOffers}} new of {{totalSeen}} seen",

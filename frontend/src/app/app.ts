@@ -12,6 +12,7 @@ import { ThemeStore } from './shared/data-access/theme-store';
  */
 const NAV_ITEMS = [
   { route: '/', icon: 'pi pi-home', label: 'nav.dashboard', activeOptions: { exact: true } },
+  { route: '/angebote', icon: 'pi pi-list', label: 'nav.offers', activeOptions: { exact: false } },
   { route: '/profil', icon: 'pi pi-id-card', label: 'nav.profiles', activeOptions: { exact: false } },
 ] as const;
 
