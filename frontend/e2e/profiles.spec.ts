@@ -52,7 +52,9 @@ test.describe('Profiles page e2e', () => {
   });
 
   test('lists the profiles and opens one in the editor', async ({ page }) => {
-    await expect(page.getByText('Standard')).toBeVisible();
+    // Nicht getByText('Standard'): der globale Profil-Umschalter in der Topbar
+    // listet denselben Namen als <option>, das wäre mehrdeutig.
+    await expect(page.getByRole('button', { name: /^Standard/ })).toBeVisible();
     await expect(page.getByText('Active')).toBeVisible();
 
     // Anker am Zeilenanfang: „Copy profile Standard" enthält den Namen ebenfalls.

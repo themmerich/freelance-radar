@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { TranslocoTestingModule } from '@jsverse/transloco';
@@ -13,6 +15,9 @@ const en = {
     themeDark: 'Switch to dark mode',
     dashboard: 'Dashboard',
     profiles: 'Profiles',
+  },
+  offers: {
+    profile: 'Profile',
   },
 };
 
@@ -49,21 +54,37 @@ describe('App', () => {
         }),
       ],
       // Leere Routen genügen: geprüft wird die Navigation der Shell, nicht die Seiten.
+      // provideHttpClientTesting: der Profil-Umschalter hängt an OffersStore, dessen
+      // httpResources sonst echte fetch()-Aufrufe auf relative URLs versuchen — die
+      // Requests bleiben hier unbeantwortet, profileOptions() bleibt beim Default [].
       providers: [
         provideRouter([
           { path: '', children: [] },
           { path: 'profil', children: [] },
         ]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
         MessageService,
       ],
     }).compileComponents();
   });
 
   afterEach(() => {
-    // ThemeStore schreibt echt auf <html> — sonst leckt ein Test in den nächsten.
+    // ThemeStore schreibt echt auf <html> — sonst leckt ein Test in den nächsten. Kein
+    // httpMock.verify(): die drei OffersStore-Requests bleiben in den meisten Tests
+    // absichtlich unbeantwortet, diese Suite prüft die Shell, nicht die Dashboard-Daten.
     document.documentElement.classList.remove('dark');
     vi.unstubAllGlobals();
   });
+
+  /** Beantwortet die 3 httpResources des Profil-Umschalters mit ihrem Leer-Default. */
+  function flushOffersRequests(): void {
+    TestBed.tick();
+    const httpMock = TestBed.inject(HttpTestingController);
+    httpMock.expectOne('/api/offers').flush([]);
+    httpMock.expectOne('/api/runs/latest').flush(null);
+    httpMock.expectOne('/api/profiles').flush([]);
+  }
 
   it('should create the app', () => {
     const fixture = TestBed.createComponent(App);
@@ -81,6 +102,10 @@ describe('App', () => {
 
   it('marks the link of the current route as the current page', async () => {
     const fixture = TestBed.createComponent(App);
+    // Unbeantwortete Requests lassen den Zoneless-Stability-Tracker ewig auf
+    // `whenStable()` warten — der Profil-Umschalter hängt am OffersStore, der beim
+    // Erzeugen sofort 3 httpResources feuert.
+    flushOffersRequests();
     await TestBed.inject(Router).navigateByUrl('/profil');
     // `routerLinkActive` markiert erst im Microtask nach der Navigation.
     await fixture.whenStable();
@@ -170,11 +195,13 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 
-    const menuButton = (fixture.nativeElement as HTMLElement).querySelector('[aria-controls="app-sidebar"]') as HTMLElement;
-    const brandName = menuButton.nextElementSibling as HTMLElement;
     // Direkte Geschwister im selben Flex-Row, kein verschachteltes `flex`: ein zweiter
     // Schrumpf-Container schrumpft in Chromium nicht zuverlässig unter seine Content-Breite.
-    expect(brandName.tagName).toBe('SPAN');
+    const menuButton = (fixture.nativeElement as HTMLElement).querySelector('[aria-controls="app-sidebar"]') as HTMLElement;
+    const topbar = menuButton.parentElement as HTMLElement;
+    const brandName = topbar.querySelector('span.truncate') as HTMLElement;
+    // SVG-Elemente sind case-sensitiv (SVG-Namensraum), tagName bleibt klein.
+    expect(brandName.previousElementSibling?.tagName).toBe('svg');
     expect(brandName.className).toContain('min-w-0');
     expect(brandName.className).toContain('truncate');
   });

@@ -22,7 +22,7 @@ const TOP_SKILL_LIMIT = 10;
   template: `
     <main class="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <ng-container *transloco="let t">
-        <p-card [header]="t('offers.title')">
+        <p-card>
           <div class="flex flex-col gap-6">
             <div class="flex flex-wrap items-center gap-4">
               <p-button
@@ -32,20 +32,6 @@ const TOP_SKILL_LIMIT = 10;
                 [loading]="store.isCollecting()"
                 (onClick)="store.collect()"
               />
-              @if (store.profileOptions().length > 0) {
-                <label class="flex items-center gap-2 text-sm">
-                  <span>{{ t('offers.profile') }}</span>
-                  <select
-                    class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
-                    [value]="activeProfileId()"
-                    (change)="onProfileChange($event)"
-                  >
-                    @for (profile of store.profileOptions(); track profile.id) {
-                      <option [value]="profile.id">{{ profile.name }}</option>
-                    }
-                  </select>
-                </label>
-              }
               @if (store.latestRun(); as run) {
                 <span class="text-sm text-surface-600 dark:text-surface-300">
                   {{ t('offers.lastRun', { newOffers: run.newOffers, totalSeen: run.totalSeen }) }}
@@ -125,12 +111,6 @@ export class OffersPage {
   protected readonly settings = inject(SettingsStore);
   protected readonly theme = inject(ThemeStore);
   protected readonly costCents = runCostCents;
-
-  protected readonly activeProfileId = computed(() => this.store.profileOptions().find((profile) => profile.active)?.id ?? null);
-
-  protected onProfileChange(event: Event): void {
-    this.store.switchProfile(Number((event.target as HTMLSelectElement).value));
-  }
 
   /** Kopien anderer Agenten: Auswertungen zählen immer nur primäre Einträge (wie v1). */
   private readonly primaryOffers = computed(() => this.store.offers().filter((offer) => offer.primary));

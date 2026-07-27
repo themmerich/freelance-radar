@@ -11,7 +11,15 @@
     >
       <div class="flex h-full flex-col">
         <div class="flex items-center gap-3 p-4 text-primary-contrast">
-          <span class="text-2xl leading-none">📡</span>
+          <!-- Radar-Sweep statt Emoji: eine Antenne im Zentrum, ein Sweep-Kegel nach oben, der äußere Ring
+               deutet den Erfassungsbereich an — passend zum „Radar“ im Namen. -->
+          <svg class="h-6 w-6 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="9.25" stroke="currentColor" stroke-width="1.5" opacity="0.35" />
+            <path d="M12 4a8 8 0 0 1 8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
+            <path d="M12 7a5 5 0 0 1 5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            <path d="M12 12V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            <circle cx="12" cy="12" r="1.6" fill="currentColor" />
+          </svg>
           <span class="text-lg leading-tight font-semibold">Freelance Radar</span>
           <!-- Die offene Schublade deckt den Menü-Knopf der Topbar ab, sie braucht ihr eigenes X. -->
           <button
@@ -69,7 +77,33 @@
         >
           <i class="pi pi-bars text-xl!"></i>
         </button>
-        <span class="min-w-0 truncate font-semibold lg:hidden">📡 Freelance Radar</span>
+        <!-- Dasselbe Radar-Logo wie in der Sidebar; eigenes <svg> statt in die Textspanne verschachtelt,
+             sonst schrumpft ein zweiter Flex-Container in Chromium nicht zuverlässig (siehe unten). -->
+        <svg class="h-5 w-5 shrink-0 lg:hidden" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="9.25" stroke="currentColor" stroke-width="1.5" opacity="0.35" />
+          <path d="M12 4a8 8 0 0 1 8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
+          <path d="M12 7a5 5 0 0 1 5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          <path d="M12 12V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          <circle cx="12" cy="12" r="1.6" fill="currentColor" />
+        </svg>
+        <span class="min-w-0 truncate font-semibold lg:hidden">Freelance Radar</span>
+
+        <!-- Profil-Umschalter: auf Desktop das erste sichtbare Element (Logo+Name sind dort schon in
+             der Sidebar), auf Mobil rechts von Logo+Name. Immer sichtbar, kein `lg:hidden`. -->
+        @if (offers.profileOptions().length > 0) {
+          <label class="flex items-center gap-2 text-sm">
+            <span>{{ t('offers.profile') }}</span>
+            <select
+              class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
+              [value]="activeProfileId()"
+              (change)="onProfileChange($event)"
+            >
+              @for (profile of offers.profileOptions(); track profile.id) {
+                <option [value]="profile.id">{{ profile.name }}</option>
+              }
+            </select>
+          </label>
+        }
 
         <!-- User/Notifications aus dem Template sind hier bewusst nicht nachgebaut — es gibt
              weder Nutzerkonten noch Benachrichtigungen in dieser App. Icon-Knopf statt Switch,

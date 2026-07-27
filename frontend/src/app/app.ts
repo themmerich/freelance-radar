@@ -1,8 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { ToastModule } from 'primeng/toast';
 
+import { OffersStore } from './offers/data-access/offers-store';
 import { ThemeStore } from './shared/data-access/theme-store';
 
 /**
@@ -22,6 +23,14 @@ const NAV_ITEMS = [
 export class App {
   protected readonly navItems = NAV_ITEMS;
   protected readonly theme = inject(ThemeStore);
+
+  /** Profil-Umschalter der Topbar — welche Perspektive Dashboard und Analysen zeigen. */
+  protected readonly offers = inject(OffersStore);
+  protected readonly activeProfileId = computed(() => this.offers.profileOptions().find((profile) => profile.active)?.id ?? null);
+
+  protected onProfileChange(event: Event): void {
+    this.offers.switchProfile(Number((event.target as HTMLSelectElement).value));
+  }
 
   /**
    * Zustand der mobilen Schublade. Bewusst ein Signal statt `pStyleClass` wie im
