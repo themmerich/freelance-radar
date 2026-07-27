@@ -105,14 +105,11 @@ test.describe('Offers dashboard e2e', () => {
     await expect(bell).toHaveAttribute('aria-expanded', 'false');
   });
 
-  test('a run reports the import numbers and the cost above the dashboard', async ({ page }) => {
+  test('a run reports the import numbers via the success toast', async ({ page }) => {
     await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
 
-    // Der Erfolgs-Toast meldet die Importzahlen.
+    // Der Erfolgs-Toast meldet die Importzahlen; die Kosten haben jetzt ihre eigene Seite (/kosten).
     await expect(page.getByText('1 new offers imported from 1 mails · 1 analyzed')).toBeVisible();
-    // 12 000 Input- + 800 Output-Tokens auf Haiku ≈ 1,6 US-Cent — die Kosten-Meldung bleibt
-    // vorerst hier, „Last run: … seen" ist jetzt oben hinter der Glocke (eigener Test).
-    await expect(page.getByText('1 analyzed · ≈1.6 ct')).toBeVisible();
   });
 
   test('shows the kpi tiles and all six charts after a run', async ({ page }) => {

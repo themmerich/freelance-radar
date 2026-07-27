@@ -16,6 +16,7 @@ const en = {
     dashboard: 'Dashboard',
     offers: 'Offers',
     profiles: 'Profiles',
+    costs: 'Costs',
   },
   offers: {
     profile: 'Profile',
@@ -67,6 +68,7 @@ describe('App', () => {
           { path: '', children: [] },
           { path: 'angebote', children: [] },
           { path: 'profil', children: [] },
+          { path: 'kosten', children: [] },
         ]),
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -105,6 +107,7 @@ describe('App', () => {
     expect(compiled.textContent).toContain('Dashboard');
     expect(compiled.textContent).toContain('Offers');
     expect(compiled.textContent).toContain('Profiles');
+    expect(compiled.textContent).toContain('Costs');
   });
 
   it('marks the link of the current route as the current page', async () => {
@@ -120,7 +123,7 @@ describe('App', () => {
     // Genau eine Markierung: „/“ ist `exact`, sonst wäre das Dashboard hier mit aktiv.
     const links = [...(fixture.nativeElement as HTMLElement).querySelectorAll('nav a')];
     const current = links.filter((link) => link.getAttribute('aria-current') === 'page');
-    expect(links).toHaveLength(3);
+    expect(links).toHaveLength(4);
     expect(current).toHaveLength(1);
     expect(current[0].textContent?.trim()).toBe('Profiles');
   });
@@ -190,7 +193,7 @@ describe('App', () => {
     fixture.detectChanges();
 
     const links = [...(fixture.nativeElement as HTMLElement).querySelectorAll('nav a')] as HTMLAnchorElement[];
-    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/', '/angebote', '/profil']);
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/', '/angebote', '/profil', '/kosten']);
   });
 
   it('shows the topbar with the theme button on every breakpoint, not just mobile', () => {

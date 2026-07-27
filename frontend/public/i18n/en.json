@@ -7,7 +7,8 @@
     "themeDark": "Switch to dark mode",
     "dashboard": "Dashboard",
     "offers": "Offers",
-    "profiles": "Profiles"
+    "profiles": "Profiles",
+    "costs": "Costs"
   },
   "profiles": {
     "title": "Profiles",
@@ -63,7 +64,6 @@
     "collect": "Fetch & analyze mails",
     "messagesTitle": "Messages",
     "lastRun": "Last run: {{newOffers}} new of {{totalSeen}} seen",
-    "lastRunAnalyzed": "{{analyzed}} analyzed",
     "noRunYet": "No run yet — fetch mails now.",
     "collectError": "The run failed. Check the GMX credentials and connection.",
     "toast": {
@@ -132,6 +132,19 @@
       "NEW": "New",
       "ANALYZED": "Analyzed",
       "ERROR": "Error"
+    }
+  },
+  "costs": {
+    "title": "Costs overview",
+    "total": "Total costs",
+    "last7Days": "Costs (last 7 days)",
+    "empty": "No runs yet.",
+    "table": {
+      "ranAt": "Run",
+      "analyzed": "Analyzed",
+      "inputTokens": "Input tokens",
+      "outputTokens": "Output tokens",
+      "cost": "Cost"
     }
   }
 }
