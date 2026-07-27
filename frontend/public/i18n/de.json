@@ -54,7 +54,10 @@
       "days": "Letzte {{days}} Tage",
       "preview": "{{candidates}} Angebote offen",
       "run": "Bewerten",
-      "done": "{{analyzed}} bewertet"
+      "done": "{{analyzed}} bewertet",
+      "dialogTitle": "Angebote neu bewerten?",
+      "dialogPrompt": "Das Profil wurde geändert. Sollen vorhandene Angebote damit neu bewertet werden — und wenn ja, ab wann?",
+      "skip": "Überspringen"
     }
   },
   "offers": {

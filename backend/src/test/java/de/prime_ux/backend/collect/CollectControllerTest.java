@@ -266,6 +266,50 @@ class CollectControllerTest {
 	}
 
 	@Test
+	void forceReanalyzeOverwritesAlreadyScoredOffersAfterAProfileChange() throws Exception {
+		MAILS.add(
+			new FetchedMail(
+				"<offer-1@freelancermap.de>",
+				"office@freelancermap.de",
+				"Angular - Anzahl neue Projekte: 1",
+				Instant.parse("2026-07-23T06:35:00Z"),
+				agentMailBody(projectBlock("Senior Angular Entwickler (m/w/d)", 3026991L))
+			)
+		);
+		// Lauf 1 analysiert das eine Angebot gegen beide geseedeten Profile — für keines bleibt danach ein Kandidat.
+		mockMvc.perform(post("/api/runs")).andExpect(status().isCreated());
+		mockMvc
+			.perform(get("/api/analyses/preview").param("profileId", "1"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.candidates").value(0));
+
+		// Ohne force bleibt eine Re-Analyse wirkungslos: das Angebot gilt schon als bewertet.
+		mockMvc
+			.perform(
+				post("/api/analyses")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(objectMapper.writeValueAsString(Map.of("profileId", 1)))
+			)
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.analyzedOffers").value(0));
+
+		// Mit force zählt es trotz vorhandenem Ergebnis wieder als Kandidat — das Profil hat sich geändert.
+		mockMvc
+			.perform(get("/api/analyses/preview").param("profileId", "1").param("force", "true"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.candidates").value(1));
+
+		mockMvc
+			.perform(
+				post("/api/analyses")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content(objectMapper.writeValueAsString(Map.of("profileId", 1, "force", true)))
+			)
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.analyzedOffers").value(1));
+	}
+
+	@Test
 	void latestRunReflectsTheMostRecentTrigger() throws Exception {
 		mockMvc.perform(get("/api/runs/latest")).andExpect(status().isNoContent());
 

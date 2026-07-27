@@ -35,8 +35,9 @@ export class ProfilesStore {
     this.mutate(this.http.post<Profile>(PROFILES_URL, draft), onCreated);
   }
 
-  update(id: number, draft: ProfileDraft): void {
-    this.mutate(this.http.put<Profile>(`${PROFILES_URL}/${id}`, draft));
+  /** `onUpdated` löst z. B. den Neubewerten-Dialog nach einer Profiländerung aus. */
+  update(id: number, draft: ProfileDraft, onUpdated?: (profile: Profile) => void): void {
+    this.mutate(this.http.put<Profile>(`${PROFILES_URL}/${id}`, draft), onUpdated);
   }
 
   remove(id: number): void {
@@ -47,12 +48,16 @@ export class ProfilesStore {
     this.mutate(this.http.post<Profile>(`${PROFILES_URL}/${id}/activate`, {}));
   }
 
-  /** Re-Analyse „Bestand gegen Profil X bewerten"; `days` null = gesamter Bestand. */
-  reanalyze(profileId: number, days: number | null): void {
+  /**
+   * Re-Analyse „Bestand gegen Profil X bewerten"; `days` null = gesamter Bestand.
+   * `force`: auch bereits bewertete Angebote neu bewerten (nach einer Profiländerung —
+   * ohne `force` gälten sie schon als erledigt und blieben auf ihrem alten Ergebnis).
+   */
+  reanalyze(profileId: number, days: number | null, force = false): void {
     this.saving.set(true);
     this.failed.set(false);
     this.http
-      .post<Run>(ANALYSES_URL, { profileId, days })
+      .post<Run>(ANALYSES_URL, { profileId, days, force })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (run) => {
@@ -66,10 +71,13 @@ export class ProfilesStore {
       });
   }
 
-  preview(profileId: number, days: number | null): Observable<AnalysisPreview> {
+  preview(profileId: number, days: number | null, force = false): Observable<AnalysisPreview> {
     const params: Record<string, string> = { profileId: `${profileId}` };
     if (days !== null) {
       params['days'] = `${days}`;
+    }
+    if (force) {
+      params['force'] = 'true';
     }
     return this.http.get<AnalysisPreview>(`${ANALYSES_URL}/preview`, { params });
   }

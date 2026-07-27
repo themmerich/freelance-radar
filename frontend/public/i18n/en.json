@@ -54,7 +54,10 @@
       "days": "Last {{days}} days",
       "preview": "{{candidates}} offers open",
       "run": "Score",
-      "done": "{{analyzed}} scored"
+      "done": "{{analyzed}} scored",
+      "dialogTitle": "Re-score offers?",
+      "dialogPrompt": "The profile changed. Should existing offers be re-scored against it — and if so, since when?",
+      "skip": "Skip"
     }
   },
   "offers": {
