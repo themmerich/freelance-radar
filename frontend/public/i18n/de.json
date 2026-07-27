@@ -13,8 +13,6 @@
   "profiles": {
     "title": "Profile",
     "list": {
-      "active": "Aktiv",
-      "activate": "Aktivieren",
       "delete": "Profil {{name}} löschen",
       "duplicate": "Profil {{name}} kopieren",
       "copyName": "{{name}} (Kopie)",

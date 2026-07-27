@@ -68,7 +68,6 @@ test.describe('Profiles page e2e', () => {
     // Nicht getByText('Standard'): der globale Profil-Umschalter in der Topbar
     // listet denselben Namen als <option>, das wäre mehrdeutig.
     await expect(page.getByRole('button', { name: /^Standard/ })).toBeVisible();
-    await expect(page.getByText('Active')).toBeVisible();
 
     // Anker am Zeilenanfang: „Copy profile Standard" enthält den Namen ebenfalls.
     await page.getByRole('button', { name: /^Standard/ }).click();
@@ -76,6 +75,22 @@ test.describe('Profiles page e2e', () => {
     await expect(page.getByLabel('Name')).toHaveValue('Standard');
     await expect(page.getByText('Angular (2-22)')).toBeVisible();
     await expect(page.getByText('React')).toBeVisible();
+  });
+
+  test('locks deletion of the last profile and deletes any other', async ({ page }) => {
+    // Nur ein Profil vorhanden: Löschen bleibt gesperrt, es muss immer eines geben.
+    await expect(page.getByRole('button', { name: 'Delete profile Standard' })).toBeDisabled();
+
+    // Mit einem zweiten Profil ist auch das aktive löschbar — das Backend aktiviert dann ein anderes.
+    await page.route('**/api/profiles', (route) =>
+      route.fulfill({ json: [STANDARD, { ...STANDARD, id: 2, name: 'Fullstack', active: false }] }),
+    );
+    await page.goto('/profil');
+
+    const deleted = page.waitForRequest((request) => request.url().endsWith('/api/profiles/1') && request.method() === 'DELETE');
+    await page.getByRole('button', { name: 'Delete profile Standard' }).click();
+
+    await deleted;
   });
 
   test('shows the cost preview and scores the backlog', async ({ page }) => {
