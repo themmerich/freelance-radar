@@ -86,16 +86,33 @@ test.describe('Offers dashboard e2e', () => {
   });
 
   test('shows the empty state before the first run', async ({ page }) => {
+    // „Last run" sitzt jetzt hinter der Glocke in der Topbar, nicht mehr direkt sichtbar.
+    await page.getByRole('button', { name: 'Messages' }).click();
     await expect(page.getByText('No run yet — fetch mails now.')).toBeVisible();
   });
 
-  test('a run reports the import numbers and the cost', async ({ page }) => {
+  test('the messages popover shows the last run and closes on Escape', async ({ page }) => {
+    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
+    await expect(page.getByText('1 new offers imported from 1 mails · 1 analyzed')).toBeVisible();
+
+    const bell = page.getByRole('button', { name: 'Messages' });
+    await bell.click();
+    await expect(page.getByText('Last run: 1 new of 1 seen')).toBeVisible();
+    await expect(bell).toHaveAttribute('aria-expanded', 'true');
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByText('Last run: 1 new of 1 seen')).toBeHidden();
+    await expect(bell).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('a run reports the import numbers and the cost above the dashboard', async ({ page }) => {
     await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
 
-    // 12 000 Input- + 800 Output-Tokens auf Haiku ≈ 1,6 US-Cent
-    await expect(page.getByText('Last run: 1 new of 1 seen · 1 analyzed · ≈1.6 ct')).toBeVisible();
     // Der Erfolgs-Toast meldet die Importzahlen.
     await expect(page.getByText('1 new offers imported from 1 mails · 1 analyzed')).toBeVisible();
+    // 12 000 Input- + 800 Output-Tokens auf Haiku ≈ 1,6 US-Cent — die Kosten-Meldung bleibt
+    // vorerst hier, „Last run: … seen" ist jetzt oben hinter der Glocke (eigener Test).
+    await expect(page.getByText('1 analyzed · ≈1.6 ct')).toBeVisible();
   });
 
   test('shows the kpi tiles and all six charts after a run', async ({ page }) => {
