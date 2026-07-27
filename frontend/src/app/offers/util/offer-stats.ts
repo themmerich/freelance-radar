@@ -13,6 +13,11 @@ export const SOURCE_TYPE_ORDER = ['AGENT', 'PRIVATE', 'NEWSLETTER', 'OTHER'] as 
 
 export type SourceType = (typeof SOURCE_TYPE_ORDER)[number];
 
+/** Feste Reihenfolge der Remote-Stufen — gleiche Regel wie `SOURCE_TYPE_ORDER`. */
+export const REMOTE_ORDER = ['REMOTE', 'HYBRID', 'ONSITE'] as const;
+
+export type RemoteType = (typeof REMOTE_ORDER)[number];
+
 /** Ampel-Stufe eines Match-Scores (🟢/🟡/🔴) — Tabelle und Histogramm teilen die Regel. */
 export type ScoreTier = 'good' | 'warning' | 'critical';
 
@@ -27,12 +32,17 @@ type StatsOffer = {
   receivedAt: string;
   sourceType: SourceType;
   agentName: string | null;
+  remote: RemoteType | null;
   matchScore: number | null;
   skills: { name: string; gap: boolean }[];
 };
 
 export type DailyCounts = { labels: string[]; counts: number[] };
 export type NamedCount = { name: string; count: number };
+/** Ø Match-Score pro Suchagent — nur analysierte Angebote fließen ein. */
+export type AgentScore = { name: string; averageScore: number };
+/** Ø Match-Score pro Tag; Tage ohne analysierte Angebote sind `null` (Lücke im Linien-Chart). */
+export type DailyAverages = { labels: string[]; averages: (number | null)[] };
 export type Kpis = {
   today: number;
   last7Days: number;
@@ -49,26 +59,59 @@ function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+/** Index des Angebots im Tagesfenster ab `start`; außerhalb liegende Werte fallen aus [0, days). */
+function dayIndex(offer: StatsOffer, start: number): number {
+  return Math.floor((startOfDay(new Date(offer.receivedAt)).getTime() - start) / DAY_MS);
+}
+
+function dayLabels(start: number, days: number): string[] {
+  return Array.from({ length: days }, (_, i) => {
+    const d = new Date(start + i * DAY_MS);
+    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.`;
+  });
+}
+
 /** Angebote pro Tag über die letzten `days` Tage (älteste zuerst, Lücken = 0). */
 export function offersPerDay(offers: StatsOffer[], days: number, today: Date): DailyCounts {
   const start = startOfDay(today).getTime() - (days - 1) * DAY_MS;
   const counts = new Array<number>(days).fill(0);
   for (const offer of offers) {
-    const index = Math.floor((startOfDay(new Date(offer.receivedAt)).getTime() - start) / DAY_MS);
+    const index = dayIndex(offer, start);
     if (index >= 0 && index < days) {
       counts[index] += 1;
     }
   }
-  const labels = Array.from({ length: days }, (_, i) => {
-    const d = new Date(start + i * DAY_MS);
-    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.`;
-  });
-  return { labels, counts };
+  return { labels: dayLabels(start, days), counts };
+}
+
+/** Ø Match-Score pro Tag über die letzten `days` Tage (älteste zuerst, gerundet). */
+export function averageScorePerDay(offers: StatsOffer[], days: number, today: Date): DailyAverages {
+  const start = startOfDay(today).getTime() - (days - 1) * DAY_MS;
+  const sums = new Array<number>(days).fill(0);
+  const counts = new Array<number>(days).fill(0);
+  for (const offer of offers) {
+    if (offer.matchScore === null) {
+      continue;
+    }
+    const index = dayIndex(offer, start);
+    if (index >= 0 && index < days) {
+      sums[index] += offer.matchScore;
+      counts[index] += 1;
+    }
+  }
+  const averages = counts.map((count, i) => (count === 0 ? null : Math.round(sums[i] / count)));
+  return { labels: dayLabels(start, days), averages };
 }
 
 /** Verteilung Agent/Privat/Newsletter/Sonstiges in fester Reihenfolge. */
 export function countBySource(offers: StatsOffer[]): number[] {
   return SOURCE_TYPE_ORDER.map((source) => offers.filter((offer) => offer.sourceType === source).length);
+}
+
+/** Verteilung Remote/Hybrid/Vor Ort in fester Reihenfolge; letzter Eintrag = nicht erkannt. */
+export function countByRemote(offers: StatsOffer[]): number[] {
+  const counts = REMOTE_ORDER.map((remote) => offers.filter((offer) => offer.remote === remote).length);
+  return [...counts, offers.filter((offer) => offer.remote === null).length];
 }
 
 /** Trigger pro Suchagent, absteigend sortiert. */
@@ -80,6 +123,22 @@ export function triggersPerAgent(offers: StatsOffer[]): NamedCount[] {
     }
   }
   return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+}
+
+/** Ø Match-Score pro Suchagent (nur analysierte Agent-Angebote), absteigend nach Score. */
+export function averageScorePerAgent(offers: StatsOffer[]): AgentScore[] {
+  const totals = new Map<string, { sum: number; count: number }>();
+  for (const offer of offers) {
+    if (offer.sourceType === 'AGENT' && offer.agentName && offer.matchScore !== null) {
+      const entry = totals.get(offer.agentName) ?? { sum: 0, count: 0 };
+      entry.sum += offer.matchScore;
+      entry.count += 1;
+      totals.set(offer.agentName, entry);
+    }
+  }
+  return [...totals.entries()]
+    .map(([name, { sum, count }]) => ({ name, averageScore: Math.round(sum / count) }))
+    .sort((a, b) => b.averageScore - a.averageScore);
 }
 
 /** Top nachgefragte Skills (alle) bzw. Top Skill-Gaps (`gapsOnly`). */
