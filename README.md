@@ -47,9 +47,13 @@ liegt bei rund **4 Cent**.
   Tokens und zählt in Auswertungen, die Kopien erscheinen als Badge „spread 3×".
 - **Bewertung gegen mehrere Profile** — Ergebnisse liegen pro Profil nebeneinander, der
   Umschalter in der Topbar wechselt die komplette Sicht (Tabelle, KPIs, Charts).
-- **Neun Auswertungen** — Angebote und Ø Match-Score pro Tag, Verteilung nach Quelle,
-  Remote-Anteil, Trigger und Ø Score je Suchagent, Top-Skills, Top-Skill-Gaps,
+- **Neun Auswertungen** — Angebote und Ø Match-Score pro Tag, Remote-Anteil, Trigger und
+  Ø Score je Suchagent, angefragte Berufsprofile, Top-Skills, Top-Skill-Gaps,
   Score-Histogramm mit Ampelfarben.
+- **Geclusterte Berufsprofile** — die Analyse liefert Rollen als Freitext, was in der Praxis
+  auf ~145 Schreibweisen für 173 Angebote hinausläuft („Full-Stack Software Engineer",
+  „Java-Fullstack-Entwickler", …). Schlüsselwort-Regeln fassen sie zu Clustern wie Fullstack,
+  Architekt oder KI & Data zusammen — deterministisch, ohne zusätzliche Token.
 - **Kostenkontrolle** — Token-Verbrauch pro Lauf protokolliert, Kostenseite mit Gesamt-
   und 7-Tage-Summe, Kostenvorschau vor jeder Neubewertung.
 - **Einstellbare Ampel** — Schwellen für 🟢/🟡 und der Duplikat-Toggle liegen im

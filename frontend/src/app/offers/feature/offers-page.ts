@@ -10,7 +10,7 @@ import {
   averageScorePerAgent,
   averageScorePerDay,
   countByRemote,
-  countBySource,
+  countByRoleCategory,
   kpis,
   offersPerDay,
   scoreHistogram,
@@ -40,10 +40,10 @@ const TOP_SKILL_LIMIT = 10;
               <app-offer-charts
                 [perDay]="perDay()"
                 [scoreTrend]="scoreTrend()"
-                [sources]="sources()"
                 [remote]="remote()"
                 [agents]="agents()"
                 [agentScores]="agentScores()"
+                [roles]="roles()"
                 [skills]="skills()"
                 [gaps]="gaps()"
                 [histogram]="histogram()"
@@ -69,10 +69,10 @@ export class OffersPage {
   protected readonly pageKpis = computed(() => kpis(this.primaryOffers(), this.settings.settings().greenThreshold, new Date()));
   protected readonly perDay = computed(() => offersPerDay(this.primaryOffers(), 30, new Date()));
   protected readonly scoreTrend = computed(() => averageScorePerDay(this.primaryOffers(), 30, new Date()));
-  protected readonly sources = computed(() => countBySource(this.primaryOffers()));
   protected readonly remote = computed(() => countByRemote(this.primaryOffers()));
   protected readonly agents = computed(() => triggersPerAgent(this.primaryOffers()));
   protected readonly agentScores = computed(() => averageScorePerAgent(this.primaryOffers()));
+  protected readonly roles = computed(() => countByRoleCategory(this.primaryOffers()));
   protected readonly skills = computed(() => topSkills(this.primaryOffers(), TOP_SKILL_LIMIT, false));
   protected readonly gaps = computed(() => topSkills(this.primaryOffers(), TOP_SKILL_LIMIT, true));
   protected readonly histogram = computed(() => scoreHistogram(this.primaryOffers()));

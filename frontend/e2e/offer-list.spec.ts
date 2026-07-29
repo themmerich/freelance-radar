@@ -125,9 +125,26 @@ test.describe('Offer list e2e', () => {
     });
 
     test('scrolls horizontally instead of squeezing the columns', async ({ page }) => {
-      // Die 11 Spalten sind breiter als der Container, also muss er horizontal scrollen.
+      // Die 12 Spalten sind breiter als der Container, also muss er horizontal scrollen.
       const scroller = page.locator('.p-datatable-table-container');
       await expect.poll(() => scroller.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+    });
+
+    test('shows the clustered job profile and filters by it', async ({ page }) => {
+      // „Angular Entwickler" fällt ins Frontend-Cluster; der Rohtext steht in der Detailzeile.
+      await expect(page.getByRole('cell', { name: 'Frontend' })).toBeVisible();
+
+      await page.getByRole('button', { name: 'Details' }).first().click();
+      await expect(page.getByText('Role per analysis:')).toBeVisible();
+      await expect(page.getByText('Angular Entwickler', { exact: true })).toBeVisible();
+
+      await page
+        .getByRole('columnheader', { name: /Job profile/ })
+        .getByRole('button')
+        .click();
+      await page.getByRole('combobox', { name: 'Filter by Job profile' }).selectOption('BACKEND');
+
+      await expect(page.getByRole('cell', { name: 'Senior Angular Entwickler' })).toHaveCount(0);
     });
 
     test('filters a column down to nothing', async ({ page }) => {

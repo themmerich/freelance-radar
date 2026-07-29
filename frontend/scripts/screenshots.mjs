@@ -21,15 +21,29 @@ const VIEWPORT = { width: 1440, height: 900 };
 
 const AGENTS = ['Angular', 'Java Spring', 'AI', 'Architekt', 'Design System'];
 const COMPANIES = ['Nordlicht Software GmbH', 'Baltic Digital AG', 'Rheinwerk Consulting', 'Alpenblick IT', 'Hansa Systems GmbH'];
-const TITLES = [
-  'Senior Angular Entwickler',
-  'Frontend Architekt Design System',
-  'Java Backend Entwickler (Spring Boot)',
-  'Fullstack Entwickler Angular/Java',
-  'KI-Engineer LLM-Integration',
-  'Angular Entwickler Barrierefreiheit',
-  'Solution Architect Cloud',
-  'Frontend Lead Enterprise Portal',
+/**
+ * Titel und Rolle bleiben gepaart — unabhängig gewürfelt stünde im Screenshot sonst
+ * „Solution Architect Cloud" neben dem Berufsprofil „Frontend". Die Rollen tragen
+ * bewusst Schreibvarianten, damit das Ranking zeigt, was die Clusterung leistet.
+ */
+const PROJECTS = [
+  { title: 'Senior Angular Entwickler', role: 'Senior Angular Entwickler' },
+  { title: 'Angular Entwickler Barrierefreiheit', role: 'Frontend Developer' },
+  { title: 'Frontend Lead Enterprise Portal', role: 'Frontend Developer' },
+  { title: 'Fullstack Entwickler Angular/Java', role: 'Java-Fullstack-Entwickler' },
+  { title: 'Fullstack Entwickler Online-Services', role: 'Senior Fullstack Entwickler' },
+  { title: 'Full-Stack Engineer Kundenportal', role: 'Full-Stack Software Engineer (React/Java)' },
+  { title: 'Java Backend Entwickler (Spring Boot)', role: 'Senior Java Backend Developer' },
+  { title: 'Backend Entwickler Microservices', role: 'Backend-Entwickler .NET' },
+  { title: 'Frontend Architekt Design System', role: 'Software Architekt' },
+  { title: 'Solution Architect Cloud', role: 'Solution Architect Cloud' },
+  { title: 'KI-Engineer LLM-Integration', role: 'AI Engineer' },
+  { title: 'KI-Beratung Azure AI Foundry', role: 'KI-Berater Azure' },
+  { title: 'Data Engineering Machine Learning', role: 'Data Engineer - Machine Learning' },
+  { title: 'DevOps Engineer Kubernetes-Plattform', role: 'DevOps Engineer' },
+  { title: 'Testautomatisierung E-Commerce', role: 'Test Automation Engineer' },
+  { title: 'UX/UI Designer Healthcare-SaaS', role: 'UX/UI Designer' },
+  { title: 'Senior Developer Online-Services', role: 'Senior Developer' },
 ];
 const SKILLS = ['Angular', 'TypeScript', 'Java', 'Spring Boot', 'Kubernetes', 'AWS', 'NgRx', 'Kotlin', 'Docker', 'REST'];
 const GAP_SKILLS = ['C#', 'OpenShift', 'React', 'Python', '.NET'];
@@ -63,6 +77,7 @@ function buildOffers() {
     // Der eigene Stack trifft besser als Fremd-Stacks — gibt dem Score je Agent Kontur.
     const affinity = agentName === 'Angular' || agentName === 'Design System' ? 20 : 0;
     const matchScore = Math.min(100, Math.max(5, Math.round(30 + affinity + random() * 50)));
+    const project = pick(PROJECTS);
 
     offers.push({
       id: i + 1,
@@ -71,9 +86,9 @@ function buildOffers() {
       subject: agentName === null ? 'Projektanfrage' : `${agentName} - Anzahl neue Projekte: 1`,
       sourceType,
       agentName,
-      projectTitle: pick(TITLES),
+      projectTitle: project.title,
       company: pick(COMPANIES),
-      role: 'Entwickler',
+      role: project.role,
       location: pick(LOCATIONS),
       country: pick(COUNTRIES),
       remote: pick(REMOTE),

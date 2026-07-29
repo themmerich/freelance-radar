@@ -2,7 +2,8 @@ import {
   averageScorePerAgent,
   averageScorePerDay,
   countByRemote,
-  countBySource,
+  countByRoleCategory,
+  roleCategory,
   kpis,
   offersPerDay,
   scoreHistogram,
@@ -10,7 +11,7 @@ import {
   triggersPerAgent,
 } from './offer-stats';
 
-type StatsOffer = Parameters<typeof countBySource>[0][number];
+type StatsOffer = Parameters<typeof countByRemote>[0][number];
 
 const TODAY = new Date('2026-07-23T12:00:00');
 
@@ -20,6 +21,7 @@ function offer(overrides: Partial<StatsOffer>): StatsOffer {
     sourceType: 'AGENT',
     agentName: 'Angular',
     remote: null,
+    role: null,
     matchScore: null,
     skills: [],
     ...overrides,
@@ -36,17 +38,6 @@ describe('offer-stats', () => {
 
     expect(result.labels).toEqual(['21.07.', '22.07.', '23.07.']);
     expect(result.counts).toEqual([1, 0, 2]);
-  });
-
-  it('counts sources in the fixed order agent, private, newsletter, other', () => {
-    const result = countBySource([
-      offer({}),
-      offer({ sourceType: 'PRIVATE' }),
-      offer({ sourceType: 'OTHER' }),
-      offer({ sourceType: 'AGENT' }),
-    ]);
-
-    expect(result).toEqual([2, 1, 0, 1]);
   });
 
   it('counts remote levels in the fixed order remote, hybrid, onsite plus unknown', () => {
@@ -89,6 +80,51 @@ describe('offer-stats', () => {
     expect(result).toEqual([
       { name: 'Angular', averageScore: 80 },
       { name: 'AI', averageScore: 36 },
+    ]);
+  });
+
+  describe('roleCategory', () => {
+    // Echte Schreibweisen aus den Angebotsdaten — alle vier meinen dieselbe Rolle.
+    it.each(['Fullstack Developer', 'Full Stack Developer', 'Full-Stack Software Engineer (React/Java)', 'Java-Fullstack-Entwickler'])(
+      'clusters "%s" as fullstack',
+      (role) => {
+        expect(roleCategory(role)).toBe('FULLSTACK');
+      },
+    );
+
+    it('lets the first matching rule win', () => {
+      // Architekt schlägt Fullstack, KI schlägt den Stack — sonst zählte dieselbe Rolle doppelt.
+      expect(roleCategory('Fullstack Software-Architekt')).toBe('ARCHITECT');
+      expect(roleCategory('Senior AI Software Engineer — Full-Stack')).toBe('AI_DATA');
+    });
+
+    it('matches short abbreviations only as whole words', () => {
+      // „ai" steckt in „Trainer", „ki" in „Skills" — als Teilstring wäre beides ein Fehltreffer.
+      expect(roleCategory('KI Berater')).toBe('AI_DATA');
+      expect(roleCategory('Trainer Telesales Outbound')).toBe('MANAGEMENT');
+    });
+
+    it('falls back to OTHER for roles no rule covers', () => {
+      expect(roleCategory('Payload CMS Experten')).toBe('CONSULTANT');
+      expect(roleCategory('Digital Marketing Allrounder')).toBe('OTHER');
+    });
+  });
+
+  it('ranks role categories descending and skips offers without a role', () => {
+    const result = countByRoleCategory([
+      offer({ role: 'Fullstack Developer' }),
+      offer({ role: 'Full Stack Developer' }),
+      offer({ role: 'Senior Fullstack Entwickler' }),
+      offer({ role: 'Solution Architect' }),
+      offer({ role: 'Frontend Entwickler' }),
+      offer({ role: null }),
+      offer({ role: '   ' }),
+    ]);
+
+    expect(result).toEqual([
+      { category: 'FULLSTACK', count: 3 },
+      { category: 'ARCHITECT', count: 1 },
+      { category: 'FRONTEND', count: 1 },
     ]);
   });
 
