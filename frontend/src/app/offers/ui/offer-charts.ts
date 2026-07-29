@@ -2,7 +2,7 @@ import { Component, computed, inject, input } from '@angular/core';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { ChartModule } from 'primeng/chart';
 
-import { AgentScore, DailyAverages, DailyCounts, NamedCount, REMOTE_ORDER, SOURCE_TYPE_ORDER, scoreTier } from '../util/offer-stats';
+import { AgentScore, DailyAverages, DailyCounts, NamedCount, REMOTE_ORDER, RoleCount, scoreTier } from '../util/offer-stats';
 
 /**
  * Die 9 Auswertungs-Charts (Kern an v1 orientiert). Farben aus einer validierten
@@ -51,10 +51,6 @@ const PALETTE = {
           <p-chart type="line" [data]="scoreTrendData()" [options]="scoreTrendOptions()" height="16rem" />
         </figure>
         <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
-          <figcaption class="text-sm font-medium">{{ t('offers.charts.sources') }}</figcaption>
-          <p-chart type="doughnut" [data]="sourceData()" [options]="doughnutOptions()" height="16rem" />
-        </figure>
-        <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
           <figcaption class="text-sm font-medium">{{ t('offers.charts.remote') }}</figcaption>
           <p-chart type="doughnut" [data]="remoteData()" [options]="doughnutOptions()" height="16rem" />
         </figure>
@@ -65,6 +61,10 @@ const PALETTE = {
         <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
           <figcaption class="text-sm font-medium">{{ t('offers.charts.agentScores') }}</figcaption>
           <p-chart type="bar" [data]="agentScoreData()" [options]="agentScoreOptions()" height="16rem" />
+        </figure>
+        <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
+          <figcaption class="text-sm font-medium">{{ t('offers.charts.roles') }}</figcaption>
+          <p-chart type="bar" [data]="roleData()" [options]="horizontalBarOptions()" height="16rem" />
         </figure>
         <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
           <figcaption class="text-sm font-medium">{{ t('offers.charts.topSkills') }}</figcaption>
@@ -85,11 +85,12 @@ const PALETTE = {
 export class OfferCharts {
   readonly perDay = input.required<DailyCounts>();
   readonly scoreTrend = input.required<DailyAverages>();
-  readonly sources = input.required<number[]>();
   /** Zählung in `REMOTE_ORDER` plus letztem Eintrag für „nicht erkannt“. */
   readonly remote = input.required<number[]>();
   readonly agents = input.required<NamedCount[]>();
   readonly agentScores = input.required<AgentScore[]>();
+  /** Angefragte Berufsprofile, bereits geclustert und sortiert. */
+  readonly roles = input.required<RoleCount[]>();
   readonly skills = input.required<NamedCount[]>();
   readonly gaps = input.required<NamedCount[]>();
   readonly histogram = input.required<number[]>();
@@ -106,20 +107,6 @@ export class OfferCharts {
     labels: this.perDay().labels,
     datasets: [{ data: this.perDay().counts, backgroundColor: this.palette().series1, borderRadius: 4 }],
   }));
-
-  protected readonly sourceData = computed(() => {
-    const palette = this.palette();
-    return {
-      labels: SOURCE_TYPE_ORDER.map((source) => this.transloco.translate(`offers.source.${source}`)),
-      datasets: [
-        {
-          data: this.sources(),
-          backgroundColor: [palette.series1, palette.series2, palette.series3, palette.series4],
-          borderWidth: 0,
-        },
-      ],
-    };
-  });
 
   protected readonly scoreTrendData = computed(() => {
     const palette = this.palette();
@@ -164,6 +151,11 @@ export class OfferCharts {
   protected readonly agentScoreData = computed(() => ({
     labels: this.agentScores().map((agent) => agent.name),
     datasets: [{ data: this.agentScores().map((agent) => agent.averageScore), backgroundColor: this.palette().series3, borderRadius: 4 }],
+  }));
+
+  protected readonly roleData = computed(() => ({
+    labels: this.roles().map((role) => this.transloco.translate(`offers.roleCategory.${role.category}`)),
+    datasets: [{ data: this.roles().map((role) => role.count), backgroundColor: this.palette().series4, borderRadius: 4 }],
   }));
 
   protected readonly skillData = computed(() => ({

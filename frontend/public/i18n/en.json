@@ -95,6 +95,7 @@
       "source": "Source",
       "agent": "Agent",
       "title": "Project",
+      "roleCategory": "Job profile",
       "company": "Company",
       "country": "Country",
       "location": "Location",
@@ -114,11 +115,11 @@
     "charts": {
       "perDay": "Offers per day (30 days)",
       "scoreTrend": "Avg match score per day (30 days)",
-      "sources": "Distribution by source",
       "remote": "Remote share",
       "remoteUnknown": "Unknown",
       "agents": "Triggers per agent",
       "agentScores": "Avg match score per agent",
+      "roles": "Requested job profiles",
       "topSkills": "Top requested skills",
       "topGaps": "Top skill gaps",
       "scores": "Match score distribution"
@@ -131,6 +132,7 @@
     "detail": {
       "notAnalyzed": "Not analyzed yet.",
       "skills": "Skills (red = missing from profile)",
+      "role": "Role per analysis",
       "rate": "Rate",
       "start": "Start",
       "duration": "Duration"
@@ -145,6 +147,21 @@
       "REMOTE": "Remote",
       "HYBRID": "Hybrid",
       "ONSITE": "On-site"
+    },
+    "roleCategory": {
+      "ARCHITECT": "Architect",
+      "AI_DATA": "AI & data",
+      "FULLSTACK": "Fullstack",
+      "FRONTEND": "Frontend",
+      "BACKEND": "Backend",
+      "DEVOPS_CLOUD": "DevOps & cloud",
+      "TEST_QA": "Test & QA",
+      "UX_DESIGN": "UX & design",
+      "MOBILE_EMBEDDED": "Mobile & embedded",
+      "MANAGEMENT": "Lead & management",
+      "CONSULTANT": "Consulting",
+      "DEVELOPMENT": "Development (general)",
+      "OTHER": "Other"
     },
     "status": {
       "NEW": "New",

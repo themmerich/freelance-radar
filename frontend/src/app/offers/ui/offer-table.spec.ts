@@ -16,6 +16,7 @@ const en = {
       source: 'Source',
       agent: 'Agent',
       title: 'Project',
+      roleCategory: 'Job profile',
       company: 'Company',
       country: 'Country',
       location: 'Location',
@@ -28,12 +29,14 @@ const en = {
     detail: {
       notAnalyzed: 'Not analyzed yet.',
       skills: 'Skills (red = missing from profile)',
+      role: 'Role per analysis',
       rate: 'Rate',
       start: 'Start',
       duration: 'Duration',
     },
     source: { AGENT: 'Agent', PRIVATE: 'Private', NEWSLETTER: 'Newsletter', OTHER: 'Other' },
     remote: { REMOTE: 'Remote', HYBRID: 'Hybrid', ONSITE: 'On-site' },
+    roleCategory: { FRONTEND: 'Frontend', FULLSTACK: 'Fullstack', OTHER: 'Other' },
     status: { NEW: 'New', ANALYZED: 'Analyzed', ERROR: 'Error' },
   },
 };
@@ -44,6 +47,8 @@ const ROW: OfferRow = {
   sourceType: 'AGENT',
   agentName: 'Angular',
   title: 'Senior Angular Entwickler',
+  role: 'Senior Angular Entwickler',
+  roleCategory: 'FRONTEND',
   company: 'softwareXperts GmbH',
   location: 'Hamburg',
   country: 'AT',
@@ -181,7 +186,7 @@ describe('OfferTable', () => {
     fixture.componentRef.setInput('offers', [ROW]);
     fixture.detectChanges();
 
-    // Match, Quelle, Agent, Projekt, Firma, Land, Ort, Remote, Status — „Eingegangen" bleibt sortierbar.
-    expect((fixture.nativeElement as HTMLElement).querySelectorAll('p-column-filter')).toHaveLength(9);
+    // Match, Quelle, Agent, Projekt, Berufsprofil, Firma, Land, Ort, Remote, Status — „Eingegangen" bleibt sortierbar.
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('p-column-filter')).toHaveLength(10);
   });
 });

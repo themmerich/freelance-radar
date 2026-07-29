@@ -6,6 +6,7 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { OffersStore } from '../data-access/offers-store';
 import { SettingsStore } from '../data-access/settings-store';
 import { OfferTable, OfferRow } from '../ui/offer-table';
+import { roleCategory } from '../util/offer-stats';
 
 @Component({
   selector: 'app-offer-list-page',
@@ -77,6 +78,9 @@ export class OfferListPage {
       sourceType: offer.sourceType,
       agentName: offer.agentName,
       title: offer.projectTitle ?? offer.subject,
+      role: offer.role,
+      // Cluster erst hier, nicht im Backend: dieselbe Regel wie im Dashboard-Ranking.
+      roleCategory: offer.role === null || offer.role.trim() === '' ? null : roleCategory(offer.role),
       company: offer.company,
       location: offer.location,
       country: offer.country,

@@ -4,11 +4,7 @@
  * in keiner Auswertung doppelt (wie in v1).
  */
 
-/**
- * Feste Reihenfolge der Quellen. Einzige Quelle der Wahrheit: `countBySource`
- * liefert die Zahlen in dieser Folge, Chart-Labels und Spaltenfilter müssen
- * dieselbe benutzen — sonst zeigt das Doughnut-Chart Zahlen unter falschen Labels.
- */
+/** Feste Reihenfolge der Quellen — der Spaltenfilter der Angebotstabelle baut darauf auf. */
 export const SOURCE_TYPE_ORDER = ['AGENT', 'PRIVATE', 'NEWSLETTER', 'OTHER'] as const;
 
 export type SourceType = (typeof SOURCE_TYPE_ORDER)[number];
@@ -28,11 +24,46 @@ export function scoreTier(score: number, greenThreshold: number, yellowThreshold
   return score >= yellowThreshold ? 'warning' : 'critical';
 }
 
+/**
+ * Cluster der angefragten Berufsprofile. Die Analyse liefert `role` als Freitext
+ * („Senior Java Fullstack", „Full-Stack Software Engineer (React/Java)") — gemessen an
+ * echten Daten ergaben 173 Angebote rund 145 verschiedene Schreibweisen, ein Ranking auf
+ * den Rohwerten wäre wertlos. Deshalb Schlüsselwörter statt Rohwerte.
+ *
+ * Die Reihenfolge ist zugleich die Prüfreihenfolge: **der erste Treffer gewinnt**. Deshalb
+ * steht ARCHITECT vor FULLSTACK („Fullstack Software-Architekt" ist eine Architektenrolle)
+ * und AI_DATA vor den Stack-Clustern („Senior AI Software Engineer — Full-Stack" zählt als
+ * KI-Rolle, das ist die Marktbewegung, die interessiert).
+ */
+const ROLE_RULES = [
+  { category: 'ARCHITECT', contains: ['architekt', 'architect'] },
+  { category: 'AI_DATA', contains: ['künstliche intelligenz', 'machine learning', 'copilot', 'data'], words: ['ki', 'ai', 'ml', 'llm'] },
+  { category: 'FULLSTACK', contains: ['fullstack', 'full stack'] },
+  { category: 'FRONTEND', contains: ['frontend', 'front end', 'angular', 'react', 'vue'] },
+  { category: 'BACKEND', contains: ['backend', 'back end'] },
+  { category: 'DEVOPS_CLOUD', contains: ['devops', 'cloud', 'plattform', 'platform', 'kubernetes', 'administrator'] },
+  { category: 'TEST_QA', contains: ['test', 'quality'], words: ['qa', 'sdet'] },
+  { category: 'UX_DESIGN', contains: ['design'], words: ['ux', 'ui'] },
+  { category: 'MOBILE_EMBEDDED', contains: ['android', 'ios', 'mobile', 'embedded', 'flutter'] },
+  { category: 'MANAGEMENT', contains: ['projektleit', 'product owner', 'manager', 'management', 'scrum', 'moderation', 'trainer'] },
+  { category: 'CONSULTANT', contains: ['consultant', 'berater', 'spezialist', 'expert'] },
+  { category: 'DEVELOPMENT', contains: ['entwickl', 'developer', 'engineer', 'software'] },
+] as const;
+
+/** Alle Cluster inklusive der Auffangkategorie für alles, was keine Regel trifft. */
+export type RoleCategory = (typeof ROLE_RULES)[number]['category'] | 'OTHER';
+
+/** Alle Cluster in Regelreihenfolge — die Filter-Auswahl der Angebotstabelle baut darauf auf. */
+export const ROLE_CATEGORY_ORDER: readonly RoleCategory[] = [...ROLE_RULES.map((rule) => rule.category), 'OTHER'];
+
+export type RoleCount = { category: RoleCategory; count: number };
+
 type StatsOffer = {
   receivedAt: string;
   sourceType: SourceType;
   agentName: string | null;
   remote: RemoteType | null;
+  role: string | null;
   matchScore: number | null;
   skills: { name: string; gap: boolean }[];
 };
@@ -103,15 +134,58 @@ export function averageScorePerDay(offers: StatsOffer[], days: number, today: Da
   return { labels: dayLabels(start, days), averages };
 }
 
-/** Verteilung Agent/Privat/Newsletter/Sonstiges in fester Reihenfolge. */
-export function countBySource(offers: StatsOffer[]): number[] {
-  return SOURCE_TYPE_ORDER.map((source) => offers.filter((offer) => offer.sourceType === source).length);
-}
-
 /** Verteilung Remote/Hybrid/Vor Ort in fester Reihenfolge; letzter Eintrag = nicht erkannt. */
 export function countByRemote(offers: StatsOffer[]): number[] {
   const counts = REMOTE_ORDER.map((remote) => offers.filter((offer) => offer.remote === remote).length);
   return [...counts, offers.filter((offer) => offer.remote === null).length];
+}
+
+/**
+ * Rollenbezeichnung auf Vergleichbares reduzieren: klein schreiben und alles außer
+ * Buchstaben/Ziffern zu Leerzeichen — so werden „Full-Stack", „Full Stack" und
+ * „Fullstack (m/w/d)" vergleichbar.
+ */
+function normalizeRole(role: string): string {
+  return role
+    .toLowerCase()
+    .replace(/[^a-zäöüß0-9]+/g, ' ')
+    .trim();
+}
+
+/**
+ * Ordnet eine Rollenbezeichnung einem Cluster zu; ohne Treffer `OTHER`.
+ *
+ * `contains` prüft auf Teilstrings — nötig für deutsche Komposita („Plattformingenieur",
+ * „Softwareentwickler"). `words` prüft nur ganze Wörter und ist den kurzen Kürzeln
+ * vorbehalten, die sonst in fremden Wörtern stecken: „ai" in „Trainer", „ki" in „Skills".
+ */
+export function roleCategory(role: string): RoleCategory {
+  const normalized = normalizeRole(role);
+  const words = new Set(normalized.split(' '));
+  for (const rule of ROLE_RULES) {
+    const hasPart = rule.contains.some((part) => normalized.includes(part));
+    const hasWord = 'words' in rule && rule.words.some((word) => words.has(word));
+    if (hasPart || hasWord) {
+      return rule.category;
+    }
+  }
+  return 'OTHER';
+}
+
+/**
+ * Ranking der angefragten Berufsprofile, absteigend. Angebote ohne Rollenangabe bleiben
+ * außen vor — eine fehlende Rolle ist kein nachgefragtes Profil.
+ */
+export function countByRoleCategory(offers: StatsOffer[]): RoleCount[] {
+  const counts = new Map<RoleCategory, number>();
+  for (const offer of offers) {
+    if (offer.role === null || offer.role.trim() === '') {
+      continue;
+    }
+    const category = roleCategory(offer.role);
+    counts.set(category, (counts.get(category) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count);
 }
 
 /** Trigger pro Suchagent, absteigend sortiert. */
