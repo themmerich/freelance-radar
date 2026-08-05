@@ -124,6 +124,11 @@
       "topGaps": "Top skill gaps",
       "scores": "Match score distribution"
     },
+    "agentAnalysis": {
+      "title": "Agent analysis",
+      "agent": "Agent",
+      "empty": "No offers from search agents yet."
+    },
     "settings": {
       "greenFrom": "from",
       "yellowFrom": "from",
