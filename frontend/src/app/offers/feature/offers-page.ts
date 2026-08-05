@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, linkedSignal } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { CardModule } from 'primeng/card';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
@@ -19,12 +19,13 @@ import {
 } from '../util/offer-stats';
 import { KpiTiles } from '../ui/kpi-tiles';
 import { OfferCharts } from '../ui/offer-charts';
+import { AgentCharts } from '../ui/agent-charts';
 
 const TOP_SKILL_LIMIT = 10;
 
 @Component({
   selector: 'app-offers-page',
-  imports: [TranslocoDirective, CardModule, ProgressSpinnerModule, KpiTiles, OfferCharts],
+  imports: [TranslocoDirective, CardModule, ProgressSpinnerModule, KpiTiles, OfferCharts, AgentCharts],
   template: `
     <main class="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <ng-container *transloco="let t">
@@ -39,18 +40,45 @@ const TOP_SKILL_LIMIT = 10;
 
               <app-offer-charts
                 [perDay]="perDay()"
-                [scoreTrend]="scoreTrend()"
                 [remote]="remote()"
                 [agents]="agents()"
                 [agentScores]="agentScores()"
                 [roles]="roles()"
-                [skills]="skills()"
-                [gaps]="gaps()"
-                [histogram]="histogram()"
-                [greenThreshold]="settings.greenThreshold()"
-                [yellowThreshold]="settings.yellowThreshold()"
                 [dark]="theme.dark()"
               />
+
+              <!-- Agenten-Analyse: Detail-Charts, gefiltert auf den gewählten Suchagenten -->
+              @if (agentNames().length === 0) {
+                <p class="text-sm text-surface-500 dark:text-surface-400">{{ t('offers.agentAnalysis.empty') }}</p>
+              } @else {
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                  <h2 class="text-lg font-semibold">{{ t('offers.agentAnalysis.title') }}</h2>
+                  <!-- Natives Select wie der Profil-Umschalter der Shell; PrimeNGs p-select kollidiert
+                       mit der FormField-Typprüfung (BaseInput erbt min/max als number-Inputs). -->
+                  <label class="flex items-center gap-2 text-sm">
+                    <span>{{ t('offers.agentAnalysis.agent') }}</span>
+                    <select
+                      class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
+                      [value]="selectedAgent()"
+                      (change)="onAgentChange($event)"
+                    >
+                      @for (name of agentNames(); track name) {
+                        <option [value]="name">{{ name }}</option>
+                      }
+                    </select>
+                  </label>
+                </div>
+
+                <app-agent-charts
+                  [scoreTrend]="agentScoreTrend()"
+                  [histogram]="agentHistogram()"
+                  [skills]="agentSkills()"
+                  [gaps]="agentGaps()"
+                  [greenThreshold]="settings.greenThreshold()"
+                  [yellowThreshold]="settings.yellowThreshold()"
+                  [dark]="theme.dark()"
+                />
+              }
             }
           </div>
         </p-card>
@@ -68,12 +96,31 @@ export class OffersPage {
 
   protected readonly pageKpis = computed(() => kpis(this.primaryOffers(), this.settings.settings().greenThreshold, new Date()));
   protected readonly perDay = computed(() => offersPerDay(this.primaryOffers(), 30, new Date()));
-  protected readonly scoreTrend = computed(() => averageScorePerDay(this.primaryOffers(), 30, new Date()));
   protected readonly remote = computed(() => countByRemote(this.primaryOffers()));
   protected readonly agents = computed(() => triggersPerAgent(this.primaryOffers()));
   protected readonly agentScores = computed(() => averageScorePerAgent(this.primaryOffers()));
   protected readonly roles = computed(() => countByRoleCategory(this.primaryOffers()));
-  protected readonly skills = computed(() => topSkills(this.primaryOffers(), TOP_SKILL_LIMIT, false));
-  protected readonly gaps = computed(() => topSkills(this.primaryOffers(), TOP_SKILL_LIMIT, true));
-  protected readonly histogram = computed(() => scoreHistogram(this.primaryOffers()));
+
+  /** Agentennamen absteigend nach Angebotszahl — zugleich Dropdown-Optionen und Quelle der Vorauswahl. */
+  protected readonly agentNames = computed(() => this.agents().map((agent) => agent.name));
+
+  /** Vorbelegt mit dem stärksten Agenten; fällt auf diesen zurück, wenn der gewählte nach einem Reload fehlt. */
+  protected readonly selectedAgent = linkedSignal<string[], string | null>({
+    source: this.agentNames,
+    computation: (names, previous) =>
+      previous !== undefined && previous.value !== null && names.includes(previous.value) ? previous.value : (names[0] ?? null),
+  });
+
+  private readonly agentOffers = computed(() =>
+    this.primaryOffers().filter((offer) => offer.sourceType === 'AGENT' && offer.agentName === this.selectedAgent()),
+  );
+
+  protected readonly agentScoreTrend = computed(() => averageScorePerDay(this.agentOffers(), 30, new Date()));
+  protected readonly agentHistogram = computed(() => scoreHistogram(this.agentOffers()));
+  protected readonly agentSkills = computed(() => topSkills(this.agentOffers(), TOP_SKILL_LIMIT, false));
+  protected readonly agentGaps = computed(() => topSkills(this.agentOffers(), TOP_SKILL_LIMIT, true));
+
+  protected onAgentChange(event: Event): void {
+    this.selectedAgent.set((event.target as HTMLSelectElement).value);
+  }
 }
