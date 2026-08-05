@@ -112,14 +112,21 @@ test.describe('Offers dashboard e2e', () => {
     await expect(page.getByText('1 new offers imported from 1 mails · 1 analyzed')).toBeVisible();
   });
 
-  test('shows the kpi tiles and all nine charts after a run', async ({ page }) => {
+  test('shows the kpi tiles and splits the nine charts across both tabs', async ({ page }) => {
     await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
 
     // exact — „Avg match score per day/agent" sind seither auch Chart-Titel.
     await expect(page.getByText('Avg match score', { exact: true })).toBeVisible();
     // Ein analysiertes Angebot mit Score 85 bei Schwelle 70 → Anteil 🟢 = 100 %.
     await expect(page.getByText('100 %')).toBeVisible();
-    await expect(page.locator('canvas')).toHaveCount(9);
+
+    // Die KPI-Kacheln stehen über beiden Tabs; die 5 globalen Charts liegen im Auftakt-Tab.
+    await expect(page.getByRole('tabpanel').locator('canvas')).toHaveCount(5);
+
+    await page.getByRole('tab', { name: 'Agent analysis' }).click();
+
+    await expect(page.getByRole('tabpanel').locator('canvas')).toHaveCount(4);
+    await expect(page.getByText('Avg match score', { exact: true })).toBeVisible();
   });
 
   test('switching the profile activates it and reloads the offers', async ({ page }) => {

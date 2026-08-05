@@ -2,6 +2,7 @@ import { Component, computed, inject, linkedSignal } from '@angular/core';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { CardModule } from 'primeng/card';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { TabsModule } from 'primeng/tabs';
 
 import { OffersStore } from '../data-access/offers-store';
 import { SettingsStore } from '../data-access/settings-store';
@@ -25,7 +26,7 @@ const TOP_SKILL_LIMIT = 10;
 
 @Component({
   selector: 'app-offers-page',
-  imports: [TranslocoDirective, CardModule, ProgressSpinnerModule, KpiTiles, OfferCharts, AgentCharts],
+  imports: [TranslocoDirective, CardModule, ProgressSpinnerModule, TabsModule, KpiTiles, OfferCharts, AgentCharts],
   template: `
     <main class="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <ng-container *transloco="let t">
@@ -38,47 +39,60 @@ const TOP_SKILL_LIMIT = 10;
             } @else {
               <app-kpi-tiles [kpis]="pageKpis()" />
 
-              <app-offer-charts
-                [perDay]="perDay()"
-                [remote]="remote()"
-                [agents]="agents()"
-                [agentScores]="agentScores()"
-                [roles]="roles()"
-                [dark]="theme.dark()"
-              />
+              <!-- Zwei Sichten auf dieselben Angebote: global über alle, dann je Suchagent.
+                   Lazy, weil Chart.js im versteckten Panel auf 0×0 misst und danach nicht mehr nachwächst. -->
+              <p-tabs value="global" [lazy]="true">
+                <p-tablist>
+                  <p-tab value="global">{{ t('offers.tabs.global') }}</p-tab>
+                  <p-tab value="agents">{{ t('offers.tabs.agentAnalysis') }}</p-tab>
+                </p-tablist>
+                <p-tabpanels>
+                  <p-tabpanel value="global">
+                    <app-offer-charts
+                      [perDay]="perDay()"
+                      [remote]="remote()"
+                      [agents]="agents()"
+                      [agentScores]="agentScores()"
+                      [roles]="roles()"
+                      [dark]="theme.dark()"
+                    />
+                  </p-tabpanel>
 
-              <!-- Agenten-Analyse: Detail-Charts, gefiltert auf den gewählten Suchagenten -->
-              @if (agentNames().length === 0) {
-                <p class="text-sm text-surface-500 dark:text-surface-400">{{ t('offers.agentAnalysis.empty') }}</p>
-              } @else {
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                  <h2 class="text-lg font-semibold">{{ t('offers.agentAnalysis.title') }}</h2>
-                  <!-- Natives Select wie der Profil-Umschalter der Shell; PrimeNGs p-select kollidiert
-                       mit der FormField-Typprüfung (BaseInput erbt min/max als number-Inputs). -->
-                  <label class="flex items-center gap-2 text-sm">
-                    <span>{{ t('offers.agentAnalysis.agent') }}</span>
-                    <select
-                      class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
-                      [value]="selectedAgent()"
-                      (change)="onAgentChange($event)"
-                    >
-                      @for (name of agentNames(); track name) {
-                        <option [value]="name">{{ name }}</option>
-                      }
-                    </select>
-                  </label>
-                </div>
+                  <!-- Agenten-Analyse: Detail-Charts, gefiltert auf den gewählten Suchagenten -->
+                  <p-tabpanel value="agents">
+                    @if (agentNames().length === 0) {
+                      <p class="text-sm text-surface-500 dark:text-surface-400">{{ t('offers.agentAnalysis.empty') }}</p>
+                    } @else {
+                      <div class="flex flex-col gap-4">
+                        <!-- Natives Select wie der Profil-Umschalter der Shell; PrimeNGs p-select kollidiert
+                             mit der FormField-Typprüfung (BaseInput erbt min/max als number-Inputs). -->
+                        <label class="flex items-center justify-end gap-2 text-sm">
+                          <span>{{ t('offers.agentAnalysis.agent') }}</span>
+                          <select
+                            class="rounded border border-surface-300 bg-transparent px-2 py-1 dark:border-surface-600"
+                            [value]="selectedAgent()"
+                            (change)="onAgentChange($event)"
+                          >
+                            @for (name of agentNames(); track name) {
+                              <option [value]="name">{{ name }}</option>
+                            }
+                          </select>
+                        </label>
 
-                <app-agent-charts
-                  [scoreTrend]="agentScoreTrend()"
-                  [histogram]="agentHistogram()"
-                  [skills]="agentSkills()"
-                  [gaps]="agentGaps()"
-                  [greenThreshold]="settings.greenThreshold()"
-                  [yellowThreshold]="settings.yellowThreshold()"
-                  [dark]="theme.dark()"
-                />
-              }
+                        <app-agent-charts
+                          [scoreTrend]="agentScoreTrend()"
+                          [histogram]="agentHistogram()"
+                          [skills]="agentSkills()"
+                          [gaps]="agentGaps()"
+                          [greenThreshold]="settings.greenThreshold()"
+                          [yellowThreshold]="settings.yellowThreshold()"
+                          [dark]="theme.dark()"
+                        />
+                      </div>
+                    }
+                  </p-tabpanel>
+                </p-tabpanels>
+              </p-tabs>
             }
           </div>
         </p-card>
