@@ -124,8 +124,11 @@
       "topGaps": "Top skill gaps",
       "scores": "Match score distribution"
     },
+    "tabs": {
+      "global": "Overall",
+      "agentAnalysis": "Agent analysis"
+    },
     "agentAnalysis": {
-      "title": "Agent analysis",
       "agent": "Agent",
       "empty": "No offers from search agents yet."
     },

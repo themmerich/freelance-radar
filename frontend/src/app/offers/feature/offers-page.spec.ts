@@ -33,8 +33,11 @@ const en = {
       topGaps: 'Top skill gaps',
       scores: 'Match score distribution',
     },
+    tabs: {
+      global: 'Overall',
+      agentAnalysis: 'Agent analysis',
+    },
     agentAnalysis: {
-      title: 'Agent analysis',
       agent: 'Agent',
       empty: 'No offers from search agents yet.',
     },
@@ -101,10 +104,33 @@ function defaultOffers(): Offer[] {
   ];
 }
 
+/** jsdom kennt keinen `ResizeObserver` — PrimeNGs Tab-Liste bindet beim Init einen für die Scroll-Pfeile. */
+function stubResizeObserver(): void {
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      private readonly targets = new Set<Element>();
+
+      observe(target: Element): void {
+        this.targets.add(target);
+      }
+
+      unobserve(target: Element): void {
+        this.targets.delete(target);
+      }
+
+      disconnect(): void {
+        this.targets.clear();
+      }
+    },
+  );
+}
+
 describe('OffersPage', () => {
   let offers: ReturnType<typeof signal<Offer[]>>;
 
   beforeEach(async () => {
+    stubResizeObserver();
     offers = signal<Offer[]>(defaultOffers());
     TestBed.overrideComponent(OfferCharts, { remove: { imports: [ChartModule] }, add: { imports: [ChartStub] } });
     TestBed.overrideComponent(AgentCharts, { remove: { imports: [ChartModule] }, add: { imports: [ChartStub] } });
@@ -142,8 +168,43 @@ describe('OffersPage', () => {
     return fixture.debugElement.query(By.directive(AgentCharts)).componentInstance as AgentCharts;
   }
 
+  function tabs(fixture: ReturnType<typeof createFixture>): HTMLElement[] {
+    return [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('[role="tab"]')];
+  }
+
+  function panels(fixture: ReturnType<typeof createFixture>): HTMLElement[] {
+    return [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('[role="tabpanel"]')];
+  }
+
+  function openAgentTab(fixture: ReturnType<typeof createFixture>): void {
+    tabs(fixture)[1].click();
+    fixture.detectChanges();
+  }
+
+  it('splits the charts into a global and an agent tab', () => {
+    const fixture = createFixture();
+
+    expect(tabs(fixture).map((tab) => tab.textContent?.trim())).toEqual(['Overall', 'Agent analysis']);
+    expect(panels(fixture)[0].querySelector('app-offer-charts')).not.toBeNull();
+    expect(panels(fixture)[0].hidden).toBe(false);
+    expect(panels(fixture)[1].hidden).toBe(true);
+  });
+
+  it('renders the agent charts only once their tab is open', () => {
+    const fixture = createFixture();
+
+    // Lazy: versteckt würde Chart.js auf 0×0 messen und danach nicht mehr nachwachsen.
+    expect(panels(fixture)[1].querySelector('app-agent-charts')).toBeNull();
+
+    openAgentTab(fixture);
+
+    expect(panels(fixture)[1].hidden).toBe(false);
+    expect(panels(fixture)[1].querySelector('app-agent-charts')).not.toBeNull();
+  });
+
   it('preselects the agent with the most offers', () => {
     const fixture = createFixture();
+    openAgentTab(fixture);
 
     const select = (fixture.nativeElement as HTMLElement).querySelector('select') as HTMLSelectElement;
     expect(select.value).toBe('AI');
@@ -152,6 +213,7 @@ describe('OffersPage', () => {
 
   it('filters the detail charts to the offers of the selected agent', () => {
     const fixture = createFixture();
+    openAgentTab(fixture);
 
     // Nur die beiden „AI“-Angebote zählen — weder „Kotlin“ (Angular) noch „Vue“ (privat).
     expect(agentCharts(fixture).skills()).toEqual([
@@ -163,6 +225,7 @@ describe('OffersPage', () => {
 
   it('keeps the selected agent when it still exists after a reload', () => {
     const fixture = createFixture();
+    openAgentTab(fixture);
     fixture.componentInstance['selectedAgent'].set('Angular');
     fixture.detectChanges();
 
@@ -174,6 +237,7 @@ describe('OffersPage', () => {
 
   it('falls back to the strongest agent when the selected one disappears', () => {
     const fixture = createFixture();
+    openAgentTab(fixture);
     fixture.componentInstance['selectedAgent'].set('Angular');
     fixture.detectChanges();
 
@@ -189,6 +253,7 @@ describe('OffersPage', () => {
   it('replaces the agent section with a hint when there are no agent offers', () => {
     offers.set([makeOffer({ sourceType: 'PRIVATE', agentName: null })]);
     const fixture = createFixture();
+    openAgentTab(fixture);
 
     const element = fixture.nativeElement as HTMLElement;
     expect(element.textContent).toContain('No offers from search agents yet.');
