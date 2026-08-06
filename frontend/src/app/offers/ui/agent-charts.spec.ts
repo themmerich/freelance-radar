@@ -9,6 +9,7 @@ import { AgentCharts } from './agent-charts';
 const en = {
   offers: {
     charts: {
+      perDay: 'Offers per day (30 days)',
       scoreTrend: 'Avg match score per day (30 days)',
       scores: 'Match score distribution',
       topSkills: 'Top requested skills',
@@ -44,6 +45,7 @@ describe('AgentCharts', () => {
 
   function createFixture() {
     const fixture = TestBed.createComponent(AgentCharts);
+    fixture.componentRef.setInput('perDay', { labels: ['01.07.'], counts: [1] });
     fixture.componentRef.setInput('scoreTrend', { labels: ['01.07.'], averages: [80] });
     fixture.componentRef.setInput('histogram', [0, 0, 0, 0, 0, 0, 0, 0, 1, 0]);
     fixture.componentRef.setInput('skills', [{ name: 'Angular', count: 2 }]);
@@ -55,20 +57,26 @@ describe('AgentCharts', () => {
     return fixture;
   }
 
-  it('renders the four agent charts with their titles', () => {
+  it('renders the five agent charts with their titles', () => {
     const fixture = createFixture();
 
     const captions = [...(fixture.nativeElement as HTMLElement).querySelectorAll('figcaption')].map((c) => c.textContent?.trim());
-    expect(captions).toEqual(['Avg match score per day (30 days)', 'Match score distribution', 'Top requested skills', 'Top skill gaps']);
+    expect(captions).toEqual([
+      'Offers per day (30 days)',
+      'Avg match score per day (30 days)',
+      'Match score distribution',
+      'Top requested skills',
+      'Top skill gaps',
+    ]);
   });
 
   it('passes skills and gaps as labels of the bar charts', () => {
     const fixture = createFixture();
 
-    // Reihenfolge wie im Template: Trend, Verteilung, Skills, Gaps.
+    // Reihenfolge wie im Template: Angebote pro Tag, Trend, Verteilung, Skills, Gaps.
     const charts = fixture.debugElement.queryAll(By.directive(ChartStub)).map((chart) => chart.componentInstance as ChartStub);
-    expect(charts).toHaveLength(4);
-    expect(charts[2].data()?.labels).toEqual(['Angular']);
-    expect(charts[3].data()?.labels).toEqual(['Kotlin']);
+    expect(charts).toHaveLength(5);
+    expect(charts[3].data()?.labels).toEqual(['Angular']);
+    expect(charts[4].data()?.labels).toEqual(['Kotlin']);
   });
 });

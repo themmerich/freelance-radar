@@ -112,7 +112,7 @@ test.describe('Offers dashboard e2e', () => {
     await expect(page.getByText('1 new offers imported from 1 mails · 1 analyzed')).toBeVisible();
   });
 
-  test('shows the kpi tiles and splits the nine charts across both tabs', async ({ page }) => {
+  test('shows the kpi tiles and splits the ten charts across both tabs', async ({ page }) => {
     await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
 
     // exact — „Avg match score per day/agent" sind seither auch Chart-Titel.
@@ -125,7 +125,7 @@ test.describe('Offers dashboard e2e', () => {
 
     await page.getByRole('tab', { name: 'Agent analysis' }).click();
 
-    await expect(page.getByRole('tabpanel').locator('canvas')).toHaveCount(4);
+    await expect(page.getByRole('tabpanel').locator('canvas')).toHaveCount(5);
     await expect(page.getByText('Avg match score', { exact: true })).toBeVisible();
   });
 

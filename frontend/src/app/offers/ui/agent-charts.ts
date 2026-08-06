@@ -3,10 +3,10 @@ import { TranslocoDirective } from '@jsverse/transloco';
 import { ChartModule } from 'primeng/chart';
 
 import { axisOptions, PALETTE } from './chart-theme';
-import { DailyAverages, NamedCount, scoreTier } from '../util/offer-stats';
+import { DailyAverages, DailyCounts, NamedCount, scoreTier } from '../util/offer-stats';
 
 /**
- * Die 4 Auswertungs-Charts der Agenten-Analyse — alle Daten sind bereits auf den
+ * Die 5 Auswertungs-Charts der Agenten-Analyse — alle Daten sind bereits auf den
  * gewählten Suchagenten gefiltert. Das Histogramm nutzt die Status-Farben der Score-Ampel.
  */
 @Component({
@@ -15,6 +15,10 @@ import { DailyAverages, NamedCount, scoreTier } from '../util/offer-stats';
   template: `
     <ng-container *transloco="let t">
       <div class="grid gap-4 md:grid-cols-2">
+        <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
+          <figcaption class="text-sm font-medium">{{ t('offers.charts.perDay') }}</figcaption>
+          <p-chart type="bar" [data]="perDayData()" [options]="barOptions()" height="16rem" />
+        </figure>
         <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
           <figcaption class="text-sm font-medium">{{ t('offers.charts.scoreTrend') }}</figcaption>
           <p-chart type="line" [data]="scoreTrendData()" [options]="scoreTrendOptions()" height="16rem" />
@@ -36,6 +40,7 @@ import { DailyAverages, NamedCount, scoreTier } from '../util/offer-stats';
   `,
 })
 export class AgentCharts {
+  readonly perDay = input.required<DailyCounts>();
   readonly scoreTrend = input.required<DailyAverages>();
   readonly skills = input.required<NamedCount[]>();
   readonly gaps = input.required<NamedCount[]>();
@@ -46,6 +51,11 @@ export class AgentCharts {
   readonly dark = input.required<boolean>();
 
   private readonly palette = computed(() => (this.dark() ? PALETTE.dark : PALETTE.light));
+
+  protected readonly perDayData = computed(() => ({
+    labels: this.perDay().labels,
+    datasets: [{ data: this.perDay().counts, backgroundColor: this.palette().series1, borderRadius: 4 }],
+  }));
 
   protected readonly scoreTrendData = computed(() => {
     const palette = this.palette();
