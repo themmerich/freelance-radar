@@ -80,6 +80,7 @@ const TOP_SKILL_LIMIT = 10;
                         </label>
 
                         <app-agent-charts
+                          [perDay]="agentPerDay()"
                           [scoreTrend]="agentScoreTrend()"
                           [histogram]="agentHistogram()"
                           [skills]="agentSkills()"
@@ -129,6 +130,7 @@ export class OffersPage {
     this.primaryOffers().filter((offer) => offer.sourceType === 'AGENT' && offer.agentName === this.selectedAgent()),
   );
 
+  protected readonly agentPerDay = computed(() => offersPerDay(this.agentOffers(), 30, new Date()));
   protected readonly agentScoreTrend = computed(() => averageScorePerDay(this.agentOffers(), 30, new Date()));
   protected readonly agentHistogram = computed(() => scoreHistogram(this.agentOffers()));
   protected readonly agentSkills = computed(() => topSkills(this.agentOffers(), TOP_SKILL_LIMIT, false));

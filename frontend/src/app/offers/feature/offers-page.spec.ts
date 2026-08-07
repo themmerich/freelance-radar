@@ -221,6 +221,11 @@ describe('OffersPage', () => {
       { name: 'MCP', count: 1 },
     ]);
     expect(agentCharts(fixture).gaps()).toEqual([{ name: 'MCP', count: 1 }]);
+    expect(
+      agentCharts(fixture)
+        .perDay()
+        .counts.reduce((sum, count) => sum + count, 0),
+    ).toBe(2);
   });
 
   it('keeps the selected agent when it still exists after a reload', () => {
