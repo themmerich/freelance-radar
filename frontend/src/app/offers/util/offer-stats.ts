@@ -80,6 +80,8 @@ export type Kpis = {
   today: number;
   last7Days: number;
   last30Days: number;
+  /** Alle analysierten Angebote ohne Zeitfenster — Kopien anderer Agenten zählen wie überall nicht mit. */
+  total: number;
   /** Ø Match-Score über analysierte Angebote; null solange nichts analysiert ist. */
   averageScore: number | null;
   /** Anteil 🟢 (Score ≥ Schwelle) in Prozent; null solange nichts analysiert ist. */
@@ -291,6 +293,7 @@ export function kpis(offers: StatsOffer[], greenThreshold: number, today: Date):
     today: offers.filter((offer) => inWindow(offer, 1)).length,
     last7Days: offers.filter((offer) => inWindow(offer, 7)).length,
     last30Days: offers.filter((offer) => inWindow(offer, 30)).length,
+    total: analyzed.length,
     averageScore,
     greenShare,
   };
