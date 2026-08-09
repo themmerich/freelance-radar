@@ -66,9 +66,11 @@ function buildOffers() {
   const pick = (list) => list[Math.floor(random() * list.length)];
   const offers = [];
 
-  for (let i = 0; i < 64; i++) {
+  // Die ersten 64 liegen im 30-Tage-Fenster der Tages-Charts, der Rest verteilt sich über
+  // das restliche Jahr — sonst zeigte das Monats-Chart einen einzelnen Balken.
+  for (let i = 0; i < 220; i++) {
     // Über die letzten 30 Tage streuen, mit Schwerpunkt auf den jüngeren Tagen.
-    const daysAgo = Math.floor(random() * random() * 30);
+    const daysAgo = i < 64 ? Math.floor(random() * random() * 30) : 30 + Math.floor(random() * 335);
     const receivedAt = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000 - Math.floor(random() * 12) * 3600 * 1000);
     // Die Suchagenten dominieren, daneben ein paar Direktanfragen und Rauschen —
     // sonst ist das Quellen-Donut einfarbig.
@@ -194,6 +196,10 @@ async function main() {
 
   await page.waitForSelector('canvas');
   await shoot(page, 'dashboard.png', { fullPage: true });
+
+  // Der zweite Tab lädt seine Charts erst beim Öffnen (lazy) — deshalb ein eigenes Bild.
+  await page.getByRole('tab', { name: 'Agent analysis' }).click();
+  await shoot(page, 'dashboard-agents.png', { fullPage: true });
 
   // Breiter, damit die Tabelle nicht mitten in den Spalten abgeschnitten wird.
   await page.getByRole('link', { name: 'Offers' }).click();

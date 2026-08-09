@@ -15,7 +15,7 @@ Ausgelöst per Knopfdruck — Tokens fließen nur, wenn ein Lauf bewusst gestart
 ![Java](https://img.shields.io/badge/Java-25-orange.svg)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791.svg)
 
-<img src="docs/screenshots/dashboard.png" alt="Dashboard mit KPI-Kacheln und neun Auswertungs-Charts" width="900">
+<img src="docs/screenshots/dashboard.png" alt="Dashboard mit KPI-Kacheln und den sechs Charts der Gesamtauswertung" width="900">
 
 </div>
 
@@ -27,7 +27,8 @@ Wer als Freelancer über Suchagenten Projektangebote bekommt, ertrinkt in Mails:
 Ausschreibung über mehrere Agenten, viel Rauschen, wenig Passendes. Freelance Radar
 beantwortet die Fragen, die aus dem Posteingang allein nicht zu beantworten sind:
 
-- **Wie viel kommt rein** — heute, in 7 Tagen, in 30 Tagen?
+- **Wie viel kommt rein** — heute, in 7 Tagen, in 30 Tagen, insgesamt? Und wie viel
+  war es im Schnitt pro Monat über das letzte Jahr?
 - **Woher** — über welchen Suchagenten, per Direktanfrage oder als Rauschen?
 - **Wie gut passt es** — Match-Score 0–100 gegen das eigene Profil, mit Begründung.
 - **Was fehlt mir** — welche Skills verlangt der Markt, die im Profil nicht stehen?
@@ -47,9 +48,12 @@ liegt bei rund **4 Cent**.
   Tokens und zählt in Auswertungen, die Kopien erscheinen als Badge „spread 3×".
 - **Bewertung gegen mehrere Profile** — Ergebnisse liegen pro Profil nebeneinander, der
   Umschalter in der Topbar wechselt die komplette Sicht (Tabelle, KPIs, Charts).
-- **Neun Auswertungen** — Angebote und Ø Match-Score pro Tag, Remote-Anteil, Trigger und
-  Ø Score je Suchagent, angefragte Berufsprofile, Top-Skills, Top-Skill-Gaps,
-  Score-Histogramm mit Ampelfarben.
+- **Dashboard in zwei Tabs** — die KPI-Zeile (heute, 7 Tage, 30 Tage, gesamt, Ø Match-Score,
+  🟢-Anteil) steht über beiden. _Gesamtauswertung_ zeigt die Marktsicht: Angebote pro Tag,
+  Anfragen pro Monat über 12 Monate mit Durchschnittslinie, Trigger und Ø Score je
+  Suchagent, Remote-Anteil, angefragte Berufsprofile. _Agenten-Analyse_ zeigt dieselben
+  Zeitreihen plus Score-Trend, Score-Histogramm mit Ampelfarben, Top-Skills und
+  Top-Skill-Gaps — alles gefiltert auf einen wählbaren Suchagenten.
 - **Geclusterte Berufsprofile** — die Analyse liefert Rollen als Freitext, was in der Praxis
   auf ~145 Schreibweisen für 173 Angebote hinausläuft („Full-Stack Software Engineer",
   „Java-Fullstack-Entwickler", …). Schlüsselwort-Regeln fassen sie zu Clustern wie Fullstack,
@@ -63,6 +67,12 @@ liegt bei rund **4 Cent**.
 ## Screenshots
 
 <table>
+<tr>
+<td colspan="2">
+<img src="docs/screenshots/dashboard-agents.png" alt="Dashboard, Tab Agenten-Analyse mit sechs auf einen Suchagenten gefilterten Charts">
+<p align="center"><em>Agenten-Analyse — dieselben Auswertungen, gefiltert auf einen wählbaren Suchagenten</em></p>
+</td>
+</tr>
 <tr>
 <td width="50%">
 <img src="docs/screenshots/offers.png" alt="Angebotstabelle mit Ampel-Spalte, Filtern und Duplikat-Badges">
