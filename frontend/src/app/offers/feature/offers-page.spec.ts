@@ -18,6 +18,7 @@ const en = {
       today: 'Today',
       last7Days: '7 days',
       last30Days: '30 days',
+      total: 'Total',
       averageScore: 'Avg match score',
       greenShare: 'Share 🟢',
     },

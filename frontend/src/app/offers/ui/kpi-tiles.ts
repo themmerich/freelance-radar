@@ -6,6 +6,7 @@ export type KpiTileData = {
   today: number;
   last7Days: number;
   last30Days: number;
+  total: number;
   averageScore: number | null;
   greenShare: number | null;
 };
@@ -15,7 +16,7 @@ export type KpiTileData = {
   imports: [TranslocoDirective],
   template: `
     <ng-container *transloco="let t">
-      <dl class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <dl class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         @for (tile of tiles(); track tile.label) {
           <div class="flex flex-col gap-1 rounded border border-surface-200 p-3 dark:border-surface-700">
             <dt class="text-sm text-surface-600 dark:text-surface-300">{{ t(tile.label) }}</dt>
@@ -35,6 +36,7 @@ export class KpiTiles {
       { label: 'offers.kpi.today', value: `${kpis.today}` },
       { label: 'offers.kpi.last7Days', value: `${kpis.last7Days}` },
       { label: 'offers.kpi.last30Days', value: `${kpis.last30Days}` },
+      { label: 'offers.kpi.total', value: `${kpis.total}` },
       { label: 'offers.kpi.averageScore', value: kpis.averageScore === null ? '—' : `${kpis.averageScore}` },
       { label: 'offers.kpi.greenShare', value: kpis.greenShare === null ? '—' : `${kpis.greenShare} %` },
     ];

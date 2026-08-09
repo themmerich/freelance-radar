@@ -119,6 +119,8 @@ test.describe('Offers dashboard e2e', () => {
     await expect(page.getByText('Avg match score', { exact: true })).toBeVisible();
     // Ein analysiertes Angebot mit Score 85 bei Schwelle 70 → Anteil 🟢 = 100 %.
     await expect(page.getByText('100 %')).toBeVisible();
+    // Gesamt zählt ohne Zeitfenster; die Kopie des zweiten Agenten bleibt außen vor.
+    await expect(page.locator('dl > div').filter({ hasText: 'Total' })).toContainText('1');
 
     // Die KPI-Kacheln stehen über beiden Tabs; die 6 globalen Charts liegen im Auftakt-Tab.
     await expect(page.getByRole('tabpanel').locator('canvas')).toHaveCount(6);

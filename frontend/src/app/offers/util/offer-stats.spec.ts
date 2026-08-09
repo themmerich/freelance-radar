@@ -231,6 +231,8 @@ describe('offer-stats', () => {
     expect(result.today).toBe(1);
     expect(result.last7Days).toBe(2);
     expect(result.last30Days).toBe(3);
+    // Ohne Zeitfenster, aber nur analysiert — das Angebot vom Januar ist es nicht.
+    expect(result.total).toBe(3);
     expect(result.averageScore).toBe(60);
     expect(result.greenShare).toBe(33);
   });
@@ -238,6 +240,7 @@ describe('offer-stats', () => {
   it('reports null score kpis while nothing is analyzed', () => {
     const result = kpis([offer({})], 70, TODAY);
 
+    expect(result.total).toBe(0);
     expect(result.averageScore).toBeNull();
     expect(result.greenShare).toBeNull();
   });
