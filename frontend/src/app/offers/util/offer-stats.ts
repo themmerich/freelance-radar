@@ -69,6 +69,8 @@ type StatsOffer = {
 };
 
 export type DailyCounts = { labels: string[]; counts: number[] };
+/** Anfragen pro Monat plus deren Schnitt über das gesamte Fenster (eine Nachkommastelle). */
+export type MonthlyCounts = { labels: string[]; counts: number[]; average: number };
 export type NamedCount = { name: string; count: number };
 /** Ø Match-Score pro Suchagent — nur analysierte Angebote fließen ein. */
 export type AgentScore = { name: string; averageScore: number };
@@ -113,6 +115,32 @@ export function offersPerDay(offers: StatsOffer[], days: number, today: Date): D
     }
   }
   return { labels: dayLabels(start, days), counts };
+}
+
+function monthLabels(start: Date, months: number): string[] {
+  return Array.from({ length: months }, (_, i) => {
+    const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
+    return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getFullYear()).slice(2)}`;
+  });
+}
+
+/**
+ * Anfragen pro Monat über die letzten `months` Monate (ältester zuerst, Lücken = 0) samt
+ * Monatsschnitt. Der Schnitt teilt durch das volle Fenster, nicht durch die Monate mit
+ * Angeboten — angefragt ist der Durchschnitt der letzten 12 Monate, leere Monate zählen mit.
+ */
+export function offersPerMonth(offers: StatsOffer[], months: number, today: Date): MonthlyCounts {
+  const start = new Date(today.getFullYear(), today.getMonth() - (months - 1), 1);
+  const counts = new Array<number>(months).fill(0);
+  for (const offer of offers) {
+    const received = new Date(offer.receivedAt);
+    const index = (received.getFullYear() - start.getFullYear()) * 12 + (received.getMonth() - start.getMonth());
+    if (index >= 0 && index < months) {
+      counts[index] += 1;
+    }
+  }
+  const total = counts.reduce((sum, count) => sum + count, 0);
+  return { labels: monthLabels(start, months), counts, average: Math.round((total / months) * 10) / 10 };
 }
 
 /** Ø Match-Score pro Tag über die letzten `days` Tage (älteste zuerst, gerundet). */

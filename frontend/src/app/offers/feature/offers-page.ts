@@ -14,6 +14,7 @@ import {
   countByRoleCategory,
   kpis,
   offersPerDay,
+  offersPerMonth,
   scoreHistogram,
   topSkills,
   triggersPerAgent,
@@ -23,6 +24,8 @@ import { OfferCharts } from '../ui/offer-charts';
 import { AgentCharts } from '../ui/agent-charts';
 
 const TOP_SKILL_LIMIT = 10;
+/** Fenster des Monats-Charts — der Titel „(12 Monate)" in den Übersetzungen nennt dieselbe Zahl. */
+const MONTHS = 12;
 
 @Component({
   selector: 'app-offers-page',
@@ -50,6 +53,7 @@ const TOP_SKILL_LIMIT = 10;
                   <p-tabpanel value="global">
                     <app-offer-charts
                       [perDay]="perDay()"
+                      [perMonth]="perMonth()"
                       [remote]="remote()"
                       [agents]="agents()"
                       [agentScores]="agentScores()"
@@ -81,6 +85,7 @@ const TOP_SKILL_LIMIT = 10;
 
                         <app-agent-charts
                           [perDay]="agentPerDay()"
+                          [perMonth]="agentPerMonth()"
                           [scoreTrend]="agentScoreTrend()"
                           [histogram]="agentHistogram()"
                           [skills]="agentSkills()"
@@ -111,6 +116,7 @@ export class OffersPage {
 
   protected readonly pageKpis = computed(() => kpis(this.primaryOffers(), this.settings.settings().greenThreshold, new Date()));
   protected readonly perDay = computed(() => offersPerDay(this.primaryOffers(), 30, new Date()));
+  protected readonly perMonth = computed(() => offersPerMonth(this.primaryOffers(), MONTHS, new Date()));
   protected readonly remote = computed(() => countByRemote(this.primaryOffers()));
   protected readonly agents = computed(() => triggersPerAgent(this.primaryOffers()));
   protected readonly agentScores = computed(() => averageScorePerAgent(this.primaryOffers()));
@@ -131,6 +137,7 @@ export class OffersPage {
   );
 
   protected readonly agentPerDay = computed(() => offersPerDay(this.agentOffers(), 30, new Date()));
+  protected readonly agentPerMonth = computed(() => offersPerMonth(this.agentOffers(), MONTHS, new Date()));
   protected readonly agentScoreTrend = computed(() => averageScorePerDay(this.agentOffers(), 30, new Date()));
   protected readonly agentHistogram = computed(() => scoreHistogram(this.agentOffers()));
   protected readonly agentSkills = computed(() => topSkills(this.agentOffers(), TOP_SKILL_LIMIT, false));

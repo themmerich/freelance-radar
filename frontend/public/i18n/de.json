@@ -114,6 +114,9 @@
     },
     "charts": {
       "perDay": "Angebote pro Tag (30 Tage)",
+      "perMonth": "Anfragen pro Monat (12 Monate)",
+      "perMonthOffers": "Anfragen",
+      "perMonthAverage": "Ø pro Monat",
       "scoreTrend": "Ø Match-Score pro Tag (30 Tage)",
       "remote": "Remote-Anteil",
       "remoteUnknown": "Unbekannt",

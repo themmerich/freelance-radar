@@ -2,11 +2,11 @@ import { Component, computed, inject, input } from '@angular/core';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { ChartModule } from 'primeng/chart';
 
-import { axisOptions, PALETTE } from './chart-theme';
-import { AgentScore, DailyCounts, NamedCount, REMOTE_ORDER, RoleCount } from '../util/offer-stats';
+import { axisOptions, axisOptionsWithLegend, PALETTE } from './chart-theme';
+import { AgentScore, DailyCounts, MonthlyCounts, NamedCount, REMOTE_ORDER, RoleCount } from '../util/offer-stats';
 
 /**
- * Die 5 globalen Auswertungs-Charts über alle Angebote (Kern an v1 orientiert) —
+ * Die 6 globalen Auswertungs-Charts über alle Angebote (Kern an v1 orientiert) —
  * insbesondere die Agenten-Vergleiche. Die agentenspezifischen Charts liegen in `AgentCharts`.
  */
 @Component({
@@ -18,6 +18,10 @@ import { AgentScore, DailyCounts, NamedCount, REMOTE_ORDER, RoleCount } from '..
         <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
           <figcaption class="text-sm font-medium">{{ t('offers.charts.perDay') }}</figcaption>
           <p-chart type="bar" [data]="perDayData()" [options]="barOptions()" height="16rem" />
+        </figure>
+        <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
+          <figcaption class="text-sm font-medium">{{ t('offers.charts.perMonth') }}</figcaption>
+          <p-chart type="bar" [data]="perMonthData()" [options]="perMonthOptions()" height="16rem" />
         </figure>
         <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
           <figcaption class="text-sm font-medium">{{ t('offers.charts.agents') }}</figcaption>
@@ -41,6 +45,7 @@ import { AgentScore, DailyCounts, NamedCount, REMOTE_ORDER, RoleCount } from '..
 })
 export class OfferCharts {
   readonly perDay = input.required<DailyCounts>();
+  readonly perMonth = input.required<MonthlyCounts>();
   /** Zählung in `REMOTE_ORDER` plus letztem Eintrag für „nicht erkannt“. */
   readonly remote = input.required<number[]>();
   readonly agents = input.required<NamedCount[]>();
@@ -58,6 +63,32 @@ export class OfferCharts {
     labels: this.perDay().labels,
     datasets: [{ data: this.perDay().counts, backgroundColor: this.palette().series1, borderRadius: 4 }],
   }));
+
+  // Balken je Monat plus gestrichelte Linie auf dem Monatsschnitt — die Legende benennt beide.
+  protected readonly perMonthData = computed(() => {
+    const palette = this.palette();
+    const perMonth = this.perMonth();
+    return {
+      labels: perMonth.labels,
+      datasets: [
+        {
+          type: 'bar' as const,
+          label: this.transloco.translate('offers.charts.perMonthOffers'),
+          data: perMonth.counts,
+          backgroundColor: palette.series1,
+          borderRadius: 4,
+        },
+        {
+          type: 'line' as const,
+          label: this.transloco.translate('offers.charts.perMonthAverage'),
+          data: perMonth.counts.map(() => perMonth.average),
+          borderColor: palette.series2,
+          borderDash: [6, 4],
+          pointRadius: 0,
+        },
+      ],
+    };
+  });
 
   protected readonly remoteData = computed(() => {
     const palette = this.palette();
@@ -93,6 +124,7 @@ export class OfferCharts {
 
   protected readonly barOptions = computed(() => axisOptions(this.palette(), 'x'));
   protected readonly horizontalBarOptions = computed(() => axisOptions(this.palette(), 'y'));
+  protected readonly perMonthOptions = computed(() => axisOptionsWithLegend(this.palette(), 'x'));
   // Der Agenten-Vergleich bekommt eine feste 0–100-Werteachse, damit Balken nicht relativ überzeichnen.
   protected readonly agentScoreOptions = computed(() => axisOptions(this.palette(), 'y', 100));
 

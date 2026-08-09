@@ -114,6 +114,9 @@
     },
     "charts": {
       "perDay": "Offers per day (30 days)",
+      "perMonth": "Requests per month (12 months)",
+      "perMonthOffers": "Requests",
+      "perMonthAverage": "Avg per month",
       "scoreTrend": "Avg match score per day (30 days)",
       "remote": "Remote share",
       "remoteUnknown": "Unknown",

@@ -23,6 +23,9 @@ const en = {
     },
     charts: {
       perDay: 'Offers per day (30 days)',
+      perMonth: 'Requests per month (12 months)',
+      perMonthOffers: 'Requests',
+      perMonthAverage: 'Avg per month',
       scoreTrend: 'Avg match score per day (30 days)',
       remote: 'Remote share',
       remoteUnknown: 'Unknown',
@@ -224,6 +227,11 @@ describe('OffersPage', () => {
     expect(
       agentCharts(fixture)
         .perDay()
+        .counts.reduce((sum, count) => sum + count, 0),
+    ).toBe(2);
+    expect(
+      agentCharts(fixture)
+        .perMonth()
         .counts.reduce((sum, count) => sum + count, 0),
     ).toBe(2);
   });
