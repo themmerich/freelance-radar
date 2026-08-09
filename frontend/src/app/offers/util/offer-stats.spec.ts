@@ -6,6 +6,7 @@ import {
   roleCategory,
   kpis,
   offersPerDay,
+  offersPerMonth,
   scoreHistogram,
   topSkills,
   triggersPerAgent,
@@ -38,6 +39,40 @@ describe('offer-stats', () => {
 
     expect(result.labels).toEqual(['21.07.', '22.07.', '23.07.']);
     expect(result.counts).toEqual([1, 0, 2]);
+  });
+
+  it('counts offers per month and averages them over the whole window', () => {
+    const result = offersPerMonth(
+      [
+        offer({}),
+        offer({}),
+        offer({ receivedAt: '2026-05-14T10:00:00' }),
+        // Genau am Fensterrand (12 Monate zurück) — zählt noch mit.
+        offer({ receivedAt: '2025-08-31T23:00:00' }),
+        // Einen Monat zu alt — fällt heraus.
+        offer({ receivedAt: '2025-07-31T23:00:00' }),
+      ],
+      12,
+      TODAY,
+    );
+
+    expect(result.labels).toEqual([
+      '08.25',
+      '09.25',
+      '10.25',
+      '11.25',
+      '12.25',
+      '01.26',
+      '02.26',
+      '03.26',
+      '04.26',
+      '05.26',
+      '06.26',
+      '07.26',
+    ]);
+    expect(result.counts).toEqual([1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2]);
+    // 4 Anfragen im Fenster, geteilt durch alle 12 Monate — leere Monate zählen mit.
+    expect(result.average).toBe(0.3);
   });
 
   it('counts remote levels in the fixed order remote, hybrid, onsite plus unknown', () => {

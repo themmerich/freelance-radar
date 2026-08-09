@@ -43,6 +43,14 @@ export const PALETTE: Record<'light' | 'dark', ChartPalette> = {
   },
 };
 
+/** Wie `axisOptions`, zusätzlich mit Legende — nötig, sobald ein Chart mehr als einen Datensatz zeigt. */
+export function axisOptionsWithLegend(palette: ChartPalette, indexAxis: 'x' | 'y'): object {
+  return {
+    ...axisOptions(palette, indexAxis),
+    plugins: { legend: { display: true, position: 'bottom', labels: { color: palette.ink, boxHeight: 2 } } },
+  };
+}
+
 /** Chart.js-Optionen für Balken/Linien; `valueMax` fixiert die Werteachse (die zur `indexAxis` orthogonale) auf 0–`valueMax`. */
 export function axisOptions(palette: ChartPalette, indexAxis: 'x' | 'y', valueMax?: number): object {
   const axis = { ticks: { color: palette.muted, precision: 0 }, grid: { color: palette.grid } };

@@ -1,12 +1,12 @@
-import { Component, computed, input } from '@angular/core';
-import { TranslocoDirective } from '@jsverse/transloco';
+import { Component, computed, inject, input } from '@angular/core';
+import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { ChartModule } from 'primeng/chart';
 
-import { axisOptions, PALETTE } from './chart-theme';
-import { DailyAverages, DailyCounts, NamedCount, scoreTier } from '../util/offer-stats';
+import { axisOptions, axisOptionsWithLegend, PALETTE } from './chart-theme';
+import { DailyAverages, DailyCounts, MonthlyCounts, NamedCount, scoreTier } from '../util/offer-stats';
 
 /**
- * Die 5 Auswertungs-Charts der Agenten-Analyse — alle Daten sind bereits auf den
+ * Die 6 Auswertungs-Charts der Agenten-Analyse — alle Daten sind bereits auf den
  * gewählten Suchagenten gefiltert. Das Histogramm nutzt die Status-Farben der Score-Ampel.
  */
 @Component({
@@ -18,6 +18,10 @@ import { DailyAverages, DailyCounts, NamedCount, scoreTier } from '../util/offer
         <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
           <figcaption class="text-sm font-medium">{{ t('offers.charts.perDay') }}</figcaption>
           <p-chart type="bar" [data]="perDayData()" [options]="barOptions()" height="16rem" />
+        </figure>
+        <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
+          <figcaption class="text-sm font-medium">{{ t('offers.charts.perMonth') }}</figcaption>
+          <p-chart type="bar" [data]="perMonthData()" [options]="perMonthOptions()" height="16rem" />
         </figure>
         <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
           <figcaption class="text-sm font-medium">{{ t('offers.charts.scoreTrend') }}</figcaption>
@@ -41,6 +45,7 @@ import { DailyAverages, DailyCounts, NamedCount, scoreTier } from '../util/offer
 })
 export class AgentCharts {
   readonly perDay = input.required<DailyCounts>();
+  readonly perMonth = input.required<MonthlyCounts>();
   readonly scoreTrend = input.required<DailyAverages>();
   readonly skills = input.required<NamedCount[]>();
   readonly gaps = input.required<NamedCount[]>();
@@ -50,12 +55,40 @@ export class AgentCharts {
   /** Von der Seite durchgereicht (ThemeStore) — reine Präsentationskomponente, kein eigener Service. */
   readonly dark = input.required<boolean>();
 
+  private readonly transloco = inject(TranslocoService);
+
   private readonly palette = computed(() => (this.dark() ? PALETTE.dark : PALETTE.light));
 
   protected readonly perDayData = computed(() => ({
     labels: this.perDay().labels,
     datasets: [{ data: this.perDay().counts, backgroundColor: this.palette().series1, borderRadius: 4 }],
   }));
+
+  // Balken je Monat plus gestrichelte Linie auf dem Monatsschnitt — die Legende benennt beide.
+  protected readonly perMonthData = computed(() => {
+    const palette = this.palette();
+    const perMonth = this.perMonth();
+    return {
+      labels: perMonth.labels,
+      datasets: [
+        {
+          type: 'bar' as const,
+          label: this.transloco.translate('offers.charts.perMonthOffers'),
+          data: perMonth.counts,
+          backgroundColor: palette.series1,
+          borderRadius: 4,
+        },
+        {
+          type: 'line' as const,
+          label: this.transloco.translate('offers.charts.perMonthAverage'),
+          data: perMonth.counts.map(() => perMonth.average),
+          borderColor: palette.series2,
+          borderDash: [6, 4],
+          pointRadius: 0,
+        },
+      ],
+    };
+  });
 
   protected readonly scoreTrendData = computed(() => {
     const palette = this.palette();
@@ -97,6 +130,7 @@ export class AgentCharts {
 
   protected readonly barOptions = computed(() => axisOptions(this.palette(), 'x'));
   protected readonly horizontalBarOptions = computed(() => axisOptions(this.palette(), 'y'));
+  protected readonly perMonthOptions = computed(() => axisOptionsWithLegend(this.palette(), 'x'));
   // Der Score-Trend bekommt eine feste 0–100-Werteachse, damit die Linie nicht relativ überzeichnet.
   protected readonly scoreTrendOptions = computed(() => axisOptions(this.palette(), 'x', 100));
 }
