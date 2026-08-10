@@ -1,8 +1,13 @@
 import {
   averageScorePerAgent,
   averageScorePerBucket,
+  averageWithCount,
   bucketFor,
   countByRemote,
+  durationBuckets,
+  hourlyRates,
+  rateBuckets,
+  remotePercentBuckets,
   countByRoleCategory,
   roleCategory,
   kpis,
@@ -26,6 +31,10 @@ function offer(overrides: Partial<StatsOffer>): StatsOffer {
     role: null,
     matchScore: null,
     skills: [],
+    budgetEur: null,
+    budgetKind: null,
+    durationMonths: null,
+    remotePercent: null,
     ...overrides,
   };
 }
@@ -143,6 +152,73 @@ describe('offer-stats', () => {
       expect(withinRange(offers, '30d', TODAY)).toHaveLength(2);
       // „Alles" reicht die Liste unverändert durch.
       expect(withinRange(offers, 'all', TODAY)).toBe(offers);
+    });
+  });
+
+  describe('rates, durations and remote share', () => {
+    it('counts only hourly budgets as rates', () => {
+      const result = hourlyRates([
+        offer({ budgetEur: 85, budgetKind: 'HOURLY' }),
+        // Ein Tagessatz und ein Gesamtbudget dürfen den Stundensatz-Schnitt nicht verfälschen.
+        offer({ budgetEur: 649, budgetKind: 'DAILY' }),
+        offer({ budgetEur: 750000, budgetKind: 'TOTAL' }),
+        offer({ budgetEur: null, budgetKind: null }),
+      ]);
+
+      expect(result).toEqual([85]);
+    });
+
+    it('reports the count alongside the average', () => {
+      expect(averageWithCount([80, 90])).toEqual({ average: 85, count: 2 });
+    });
+
+    it('reports null rather than zero when nothing is known', () => {
+      // Eine 0 wäre eine Aussage, die niemand getroffen hat.
+      expect(averageWithCount([])).toEqual({ average: null, count: 0 });
+    });
+
+    it('puts a value that sits exactly on a class edge into the lower class', () => {
+      const result = durationBuckets([
+        offer({ durationMonths: 3 }),
+        offer({ durationMonths: 4 }),
+        offer({ durationMonths: 6 }),
+        offer({ durationMonths: 12 }),
+        offer({ durationMonths: 13 }),
+      ]);
+
+      expect(result).toEqual([
+        { name: '≤ 3', count: 1 },
+        { name: '4–6', count: 2 },
+        { name: '7–12', count: 1 },
+        { name: '> 12', count: 1 },
+      ]);
+    });
+
+    it('keeps the outer rate classes open so no value slips through', () => {
+      const result = rateBuckets([
+        offer({ budgetEur: 40, budgetKind: 'HOURLY' }),
+        offer({ budgetEur: 60, budgetKind: 'HOURLY' }),
+        offer({ budgetEur: 200, budgetKind: 'HOURLY' }),
+      ]);
+
+      expect(result.map((entry) => entry.count)).toEqual([1, 1, 0, 0, 1]);
+    });
+
+    it('separates fully remote from the rest', () => {
+      const result = remotePercentBuckets([
+        offer({ remotePercent: 0 }),
+        offer({ remotePercent: 20 }),
+        offer({ remotePercent: 99 }),
+        offer({ remotePercent: 100 }),
+        offer({ remotePercent: null }),
+      ]);
+
+      expect(result).toEqual([
+        { name: '0 %', count: 1 },
+        { name: '1–49 %', count: 1 },
+        { name: '50–99 %', count: 1 },
+        { name: '100 %', count: 1 },
+      ]);
     });
   });
 
