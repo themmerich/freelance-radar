@@ -60,7 +60,9 @@ function signed(delta: number): string {
       <dl class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         @for (tile of tiles(); track tile.label) {
           <div class="flex flex-col gap-1 rounded border border-surface-200 p-3 dark:border-surface-700">
-            <dt class="text-sm text-surface-600 dark:text-surface-300">{{ t(tile.label) }}</dt>
+            <!-- Zwei Zeilen reserviert: „(30 Tage)" bricht in den schmalen Kacheln um,
+                 sonst stünden die Werte der sechs Kacheln auf verschiedenen Höhen. -->
+            <dt class="min-h-10 text-sm text-surface-600 dark:text-surface-300">{{ t(tile.label) }}</dt>
             <dd class="flex flex-wrap items-baseline gap-2">
               <span class="text-2xl font-semibold">{{ tile.value }}</span>
 
