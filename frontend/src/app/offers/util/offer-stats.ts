@@ -68,6 +68,15 @@ type StatsOffer = {
   skills: { name: string; gap: boolean }[];
 };
 
+/** Auswertungsfenster des Dashboards — der Umschalter über den Tabs setzt es. */
+export type TimeRange = '30d' | '90d' | '12m' | 'all';
+/** Auflösung der Zeitreihen; hängt fest am Fenster, siehe `BUCKET_PER_RANGE`. */
+export type Bucket = 'day' | 'week' | 'month';
+/** Zählung je Bucket plus deren Schnitt über das gesamte Fenster (eine Nachkommastelle). */
+export type BucketedCounts = { labels: string[]; counts: number[]; average: number };
+/** Ø Match-Score je Bucket; Buckets ohne analysierte Angebote sind `null` (Lücke im Linien-Chart). */
+export type BucketedAverages = { labels: string[]; averages: (number | null)[] };
+
 export type DailyCounts = { labels: string[]; counts: number[] };
 /** Anfragen pro Monat plus deren Schnitt über das gesamte Fenster (eine Nachkommastelle). */
 export type MonthlyCounts = { labels: string[]; counts: number[]; average: number };
@@ -162,6 +171,143 @@ export function averageScorePerDay(offers: StatsOffer[], days: number, today: Da
   }
   const averages = counts.map((count, i) => (count === 0 ? null : Math.round(sums[i] / count)));
   return { labels: dayLabels(start, days), averages };
+}
+
+const BUCKET_PER_RANGE: Record<TimeRange, Bucket> = { '30d': 'day', '90d': 'week', '12m': 'month', all: 'month' };
+
+export function bucketFor(range: TimeRange): Bucket {
+  return BUCKET_PER_RANGE[range];
+}
+
+/** Wochen beginnen montags — `getDay()` zählt ab Sonntag, deshalb der Versatz. */
+function startOfWeek(date: Date): Date {
+  const day = startOfDay(date);
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate() - ((day.getDay() + 6) % 7));
+}
+
+function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function startOfBucket(date: Date, bucket: Bucket): Date {
+  if (bucket === 'week') {
+    return startOfWeek(date);
+  }
+  return bucket === 'month' ? startOfMonth(date) : startOfDay(date);
+}
+
+/**
+ * Beginn des ältesten Buckets im Fenster. Der laufende Tag/die laufende Woche/der laufende
+ * Monat zählt mit, ist also angeschnitten — dieselbe Konvention wie bei den KPI-Fenstern.
+ * Datumsarithmetik statt Millisekunden, damit Sommerzeitwechsel nicht um eine Stunde verrutschen.
+ */
+function rangeStart(offers: StatsOffer[], range: TimeRange, today: Date): Date {
+  switch (range) {
+    case '30d': {
+      const day = startOfDay(today);
+      return new Date(day.getFullYear(), day.getMonth(), day.getDate() - 29);
+    }
+    case '90d': {
+      const week = startOfWeek(today);
+      return new Date(week.getFullYear(), week.getMonth(), week.getDate() - 12 * 7);
+    }
+    case '12m':
+      return new Date(today.getFullYear(), today.getMonth() - 11, 1);
+    case 'all': {
+      const oldest = offers.reduce<number | null>((min, offer) => {
+        const time = new Date(offer.receivedAt).getTime();
+        return min === null || time < min ? time : min;
+      }, null);
+      // Ohne Angebote bleibt der laufende Monat als einziger Bucket stehen.
+      return startOfMonth(oldest === null ? today : new Date(oldest));
+    }
+  }
+}
+
+function bucketCount(start: Date, range: TimeRange, today: Date): number {
+  switch (range) {
+    case '30d':
+      return 30;
+    case '90d':
+      return 13;
+    case '12m':
+      return 12;
+    case 'all':
+      return (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth()) + 1;
+  }
+}
+
+/** Index des Angebots im Fenster; außerhalb liegende Werte fallen aus [0, count). */
+function bucketIndex(offer: StatsOffer, start: Date, bucket: Bucket): number {
+  const received = startOfBucket(new Date(offer.receivedAt), bucket);
+  if (bucket === 'month') {
+    return (received.getFullYear() - start.getFullYear()) * 12 + (received.getMonth() - start.getMonth());
+  }
+  // Gerundet, weil ein Tag über den Sommerzeitwechsel 23 bzw. 25 Stunden hat.
+  return Math.round((received.getTime() - start.getTime()) / DAY_MS / (bucket === 'week' ? 7 : 1));
+}
+
+function bucketLabels(start: Date, count: number, bucket: Bucket): string[] {
+  return Array.from({ length: count }, (_, i) => {
+    if (bucket === 'month') {
+      const month = new Date(start.getFullYear(), start.getMonth() + i, 1);
+      return `${String(month.getMonth() + 1).padStart(2, '0')}.${String(month.getFullYear()).slice(2)}`;
+    }
+    // Wochen tragen das Datum ihres Montags — die Auflösung steht im Chart-Titel.
+    const day = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i * (bucket === 'week' ? 7 : 1));
+    return `${String(day.getDate()).padStart(2, '0')}.${String(day.getMonth() + 1).padStart(2, '0')}.`;
+  });
+}
+
+/**
+ * Schneidet die Angebote auf das Fenster zu — der eine Filter, aus dem alle Charts rechnen.
+ * Benutzt denselben Start wie die Buckets, sonst widersprächen sich Verteilungen und Zeitreihe.
+ */
+export function withinRange(offers: StatsOffer[], range: TimeRange, today: Date): StatsOffer[] {
+  if (range === 'all') {
+    return offers;
+  }
+  const start = rangeStart(offers, range, today).getTime();
+  return offers.filter((offer) => new Date(offer.receivedAt).getTime() >= start);
+}
+
+/** Angebote je Bucket über das Fenster (ältester zuerst, Lücken = 0) samt Schnitt je Bucket. */
+export function offersPerBucket(offers: StatsOffer[], range: TimeRange, today: Date): BucketedCounts {
+  const bucket = bucketFor(range);
+  const start = rangeStart(offers, range, today);
+  const count = bucketCount(start, range, today);
+  const counts = new Array<number>(count).fill(0);
+  for (const offer of offers) {
+    const index = bucketIndex(offer, start, bucket);
+    if (index >= 0 && index < count) {
+      counts[index] += 1;
+    }
+  }
+  const total = counts.reduce((sum, value) => sum + value, 0);
+  return { labels: bucketLabels(start, count, bucket), counts, average: Math.round((total / count) * 10) / 10 };
+}
+
+/** Ø Match-Score je Bucket über das Fenster (ältester zuerst, gerundet). */
+export function averageScorePerBucket(offers: StatsOffer[], range: TimeRange, today: Date): BucketedAverages {
+  const bucket = bucketFor(range);
+  const start = rangeStart(offers, range, today);
+  const count = bucketCount(start, range, today);
+  const sums = new Array<number>(count).fill(0);
+  const counts = new Array<number>(count).fill(0);
+  for (const offer of offers) {
+    if (offer.matchScore === null) {
+      continue;
+    }
+    const index = bucketIndex(offer, start, bucket);
+    if (index >= 0 && index < count) {
+      sums[index] += offer.matchScore;
+      counts[index] += 1;
+    }
+  }
+  return {
+    labels: bucketLabels(start, count, bucket),
+    averages: counts.map((value, i) => (value === 0 ? null : Math.round(sums[i] / value))),
+  };
 }
 
 /** Verteilung Remote/Hybrid/Vor Ort in fester Reihenfolge; letzter Eintrag = nicht erkannt. */
