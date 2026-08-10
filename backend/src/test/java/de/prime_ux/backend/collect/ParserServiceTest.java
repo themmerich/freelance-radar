@@ -124,7 +124,8 @@ class ParserServiceTest {
 		ParsedProject project = parsed.projects().getFirst();
 		assertThat(project.title()).isEqualTo("Senior Angular Entwickler (m/w/d)");
 		assertThat(project.remote()).isEqualTo(Remote.REMOTE);
-		assertThat(project.rate()).startsWith("95,00 €");
-		assertThat(project.duration()).isEqualTo("6 Monate");
+		// Satz und Laufzeit liest der Parser bewusst nicht mehr aus dem Mailtext: über 532
+		// echte Angebote hat die Regex kein einziges Mal gegriffen. Beides kommt von der
+		// Projektseite.
 	}
 }

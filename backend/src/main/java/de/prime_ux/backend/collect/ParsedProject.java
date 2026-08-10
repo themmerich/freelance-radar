@@ -12,9 +12,7 @@ public record ParsedProject(
 	String company,
 	String location,
 	Remote remote,
-	String rate,
 	String startDate,
-	String duration,
 	Long fmProjectId,
 	String url
 ) {}

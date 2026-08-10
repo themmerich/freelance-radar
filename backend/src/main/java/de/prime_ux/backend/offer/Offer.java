@@ -76,14 +76,8 @@ public class Offer {
 	@Column(columnDefinition = "text")
 	private Remote remote;
 
-	@Column(columnDefinition = "text")
-	private String rate;
-
 	@Column(name = "start_date", columnDefinition = "text")
 	private String startDate;
-
-	@Column(columnDefinition = "text")
-	private String duration;
 
 	@Column(columnDefinition = "text")
 	private String seniority;

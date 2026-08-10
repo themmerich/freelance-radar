@@ -91,9 +91,7 @@ public class OfferIntake {
 			offer.setCompany(project.company());
 			offer.setLocation(project.location());
 			offer.setRemote(project.remote());
-			offer.setRate(project.rate());
 			offer.setStartDate(project.startDate());
-			offer.setDuration(project.duration());
 			offer.setFmProjectId(project.fmProjectId());
 			offer.setProjectUrl(project.url());
 			offer.setRawBody(truncateBody(mail.body()));
