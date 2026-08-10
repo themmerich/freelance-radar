@@ -8,6 +8,7 @@ import { OffersStore } from '../data-access/offers-store';
 import { SettingsStore } from '../data-access/settings-store';
 import { ThemeStore } from '../../shared/data-access/theme-store';
 import { Offer } from '../domain/offer';
+import { TimeRange } from '../util/offer-stats';
 import { AgentCharts } from '../ui/agent-charts';
 import { OfferCharts } from '../ui/offer-charts';
 import { OffersPage } from './offers-page';
@@ -23,11 +24,16 @@ const en = {
       greenShare: 'Share 🟢',
     },
     charts: {
-      perDay: 'Offers per day (30 days)',
-      perMonth: 'Requests per month (12 months)',
-      perMonthOffers: 'Requests',
-      perMonthAverage: 'Avg per month',
-      scoreTrend: 'Avg match score per day (30 days)',
+      perDay: 'Offers per day',
+      perWeek: 'Offers per week',
+      perMonth: 'Offers per month',
+      offersLegend: 'Offers',
+      averagePerDay: 'Avg per day',
+      averagePerWeek: 'Avg per week',
+      averagePerMonth: 'Avg per month',
+      scoreTrendDay: 'Avg match score per day',
+      scoreTrendWeek: 'Avg match score per week',
+      scoreTrendMonth: 'Avg match score per month',
       remote: 'Remote share',
       remoteUnknown: 'Unknown',
       agents: 'Triggers per agent',
@@ -41,6 +47,7 @@ const en = {
       global: 'Overall',
       agentAnalysis: 'Agent analysis',
     },
+    range: { label: 'Time range', '30d': '30 days', '90d': '90 days', '12m': '12 months', all: 'All' },
     agentAnalysis: {
       agent: 'Agent',
       empty: 'No offers from search agents yet.',
@@ -91,7 +98,12 @@ function makeOffer(patch: Partial<Offer>): Offer {
   };
 }
 
-/** 2× „AI“ (stärkster Agent), 1× „Angular“, 1 private Anfrage — Skills klar pro Agent getrennt. */
+const DAYS_AGO_200 = new Date(Date.now() - 200 * 24 * 60 * 60 * 1000).toISOString();
+
+/**
+ * 2× „AI“ (stärkster Agent), 1× „Angular“, 1 private Anfrage — Skills klar pro Agent getrennt.
+ * Dazu ein altes „AI“-Angebot, das nur in weiten Zeiträumen mitzählt.
+ */
 function defaultOffers(): Offer[] {
   return [
     makeOffer({ agentName: 'AI', matchScore: 80, skills: [{ name: 'LLM', gap: false }] }),
@@ -105,6 +117,7 @@ function defaultOffers(): Offer[] {
     }),
     makeOffer({ agentName: 'Angular', matchScore: 90, skills: [{ name: 'Kotlin', gap: true }] }),
     makeOffer({ sourceType: 'PRIVATE', agentName: null, skills: [{ name: 'Vue', gap: true }] }),
+    makeOffer({ agentName: 'AI', receivedAt: DAYS_AGO_200, matchScore: 50, skills: [{ name: 'Legacy', gap: false }] }),
   ];
 }
 
@@ -132,10 +145,12 @@ function stubResizeObserver(): void {
 
 describe('OffersPage', () => {
   let offers: ReturnType<typeof signal<Offer[]>>;
+  let range: ReturnType<typeof signal<TimeRange>>;
 
   beforeEach(async () => {
     stubResizeObserver();
     offers = signal<Offer[]>(defaultOffers());
+    range = signal<TimeRange>('30d');
     TestBed.overrideComponent(OfferCharts, { remove: { imports: [ChartModule] }, add: { imports: [ChartStub] } });
     TestBed.overrideComponent(AgentCharts, { remove: { imports: [ChartModule] }, add: { imports: [ChartStub] } });
     await TestBed.configureTestingModule({
@@ -155,6 +170,8 @@ describe('OffersPage', () => {
             settings: signal({ greenThreshold: 70, yellowThreshold: 40, collapseDuplicates: true }),
             greenThreshold: () => 70,
             yellowThreshold: () => 40,
+            range,
+            setRange: (value: TimeRange) => range.set(value),
           },
         },
         { provide: ThemeStore, useValue: { dark: signal(false) } },
@@ -172,6 +189,10 @@ describe('OffersPage', () => {
     return fixture.debugElement.query(By.directive(AgentCharts)).componentInstance as AgentCharts;
   }
 
+  function offerCharts(fixture: ReturnType<typeof createFixture>): OfferCharts {
+    return fixture.debugElement.query(By.directive(OfferCharts)).componentInstance as OfferCharts;
+  }
+
   function tabs(fixture: ReturnType<typeof createFixture>): HTMLElement[] {
     return [...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('[role="tab"]')];
   }
@@ -184,6 +205,36 @@ describe('OffersPage', () => {
     tabs(fixture)[1].click();
     fixture.detectChanges();
   }
+
+  it('cuts every chart to the range, not just the time series', () => {
+    const fixture = createFixture();
+
+    // 30 Tage: das 200 Tage alte „AI“-Angebot zählt weder im Agenten-Vergleich …
+    expect(offerCharts(fixture).agents()).toEqual([
+      { name: 'AI', count: 2 },
+      { name: 'Angular', count: 1 },
+    ]);
+    // … noch in der Zeitreihe.
+    expect(
+      offerCharts(fixture)
+        .counts()
+        .counts.reduce((sum: number, count: number) => sum + count, 0),
+    ).toBe(4);
+  });
+
+  it('widens the charts and coarsens the resolution when the range grows', () => {
+    const fixture = createFixture();
+
+    range.set('all');
+    fixture.detectChanges();
+
+    expect(offerCharts(fixture).agents()).toEqual([
+      { name: 'AI', count: 3 },
+      { name: 'Angular', count: 1 },
+    ]);
+    expect(offerCharts(fixture).bucket()).toBe('month');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Offers per month');
+  });
 
   it('splits the charts into a global and an agent tab', () => {
     const fixture = createFixture();
@@ -219,7 +270,8 @@ describe('OffersPage', () => {
     const fixture = createFixture();
     openAgentTab(fixture);
 
-    // Nur die beiden „AI“-Angebote zählen — weder „Kotlin“ (Angular) noch „Vue“ (privat).
+    // Nur die beiden jungen „AI“-Angebote zählen — weder „Kotlin“ (Angular), „Vue“ (privat)
+    // noch „Legacy“ aus dem Angebot, das 200 Tage zurückliegt.
     expect(agentCharts(fixture).skills()).toEqual([
       { name: 'LLM', count: 2 },
       { name: 'MCP', count: 1 },
@@ -227,13 +279,8 @@ describe('OffersPage', () => {
     expect(agentCharts(fixture).gaps()).toEqual([{ name: 'MCP', count: 1 }]);
     expect(
       agentCharts(fixture)
-        .perDay()
-        .counts.reduce((sum, count) => sum + count, 0),
-    ).toBe(2);
-    expect(
-      agentCharts(fixture)
-        .perMonth()
-        .counts.reduce((sum, count) => sum + count, 0),
+        .counts()
+        .counts.reduce((sum: number, count: number) => sum + count, 0),
     ).toBe(2);
   });
 
