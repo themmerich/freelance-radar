@@ -40,6 +40,9 @@ public class ClaudeOfferAnalyzer implements OfferAnalyzer {
 		(z.B. "Angular", "NgRx", "Spring Boot", "Kotlin", "AWS"). gap=true für Skills, \
 		die NICHT im Profil vorkommen.
 
+		Stundensatz, Laufzeit und Auslastung stehen strukturiert in der Datenbank und sind \
+		nicht zu schätzen — sie tauchen im Ergebnis gar nicht auf.
+
 		Erfinde keine Daten — wenn ein Feld nicht im Text steht, nutze null bzw. eine leere \
 		Liste. offerId MUSS die übergebene id des Angebots sein.
 
@@ -132,10 +135,21 @@ public class ClaudeOfferAnalyzer implements OfferAnalyzer {
 					offer.getRate(),
 					offer.getStartDate(),
 					offer.getDuration(),
-					truncate(offer.getRawBody())
+					truncate(promptText(offer))
 				)
 			)
 			.toList();
+	}
+
+	/**
+	 * Die Projektbeschreibung von der Detailseite, sonst der Mailtext.
+	 *
+	 * Die Agenten-Mail ist ein Teaser aus sieben Zeilen — Skills und Branche daraus zu
+	 * bestimmen, hieß bislang praktisch: aus dem Projekttitel raten. Wo der Abruf der
+	 * Detailseite gelang, steht hier stattdessen die echte Ausschreibung.
+	 */
+	static String promptText(Offer offer) {
+		return offer.getDescription() == null || offer.getDescription().isBlank() ? offer.getRawBody() : offer.getDescription();
 	}
 
 	private String truncate(String body) {

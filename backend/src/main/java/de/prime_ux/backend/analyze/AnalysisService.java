@@ -73,7 +73,10 @@ public class AnalysisService {
 	 * nachanalysiert. Jedes Profil zählt einzeln gegen den Kostendeckel.
 	 */
 	@Transactional
-	public void analyzeNewOffers(Run run) {
+	public void analyzeNewOffers(Long runId) {
+		// Über die ID statt über die Instanz: der Aufrufer orchestriert ohne Transaktion,
+		// eine übergebene Run-Instanz wäre hier detached und ihre Änderungen verpufften.
+		Run run = runs.findById(runId).orElseThrow();
 		int analyzed = 0;
 		long inputTokens = 0;
 		long outputTokens = 0;
