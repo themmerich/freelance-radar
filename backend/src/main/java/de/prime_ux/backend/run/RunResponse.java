@@ -8,6 +8,9 @@ public record RunResponse(
 	int newOffers,
 	int totalSeen,
 	int analyzedOffers,
+	/** Abgerufene Projekt-Detailseiten — ein Lauf ohne neue Mails arbeitet oft nur diese Warteschlange ab. */
+	int detailsFetched,
+	int detailsFailed,
 	long inputTokens,
 	long outputTokens,
 	String note
@@ -19,6 +22,8 @@ public record RunResponse(
 			run.getNewOffers(),
 			run.getTotalSeen(),
 			run.getAnalyzedOffers(),
+			run.getDetailsFetched(),
+			run.getDetailsFailed(),
 			run.getInputTokens(),
 			run.getOutputTokens(),
 			run.getNote()

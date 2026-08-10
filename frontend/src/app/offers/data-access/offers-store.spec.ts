@@ -53,6 +53,8 @@ const RUN: Run = {
   newOffers: 1,
   totalSeen: 1,
   analyzedOffers: 0,
+  detailsFetched: 0,
+  detailsFailed: 0,
   inputTokens: 0,
   outputTokens: 0,
   note: 'since=2026-07-22',

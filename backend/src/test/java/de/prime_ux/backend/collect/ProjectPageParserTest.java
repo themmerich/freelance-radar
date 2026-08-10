@@ -36,7 +36,7 @@ class ProjectPageParserTest {
 	void readsEveryFactFromARealPage() {
 		ProjectDetails details = parser.parse(fixture("full-with-rate.html"));
 
-		assertThat(details.rateHourlyEur()).isEqualByComparingTo("70.00");
+		assertThat(details.budgetEur()).isEqualByComparingTo("70.00");
 		assertThat(details.utilizationPercent()).isEqualTo(100);
 		assertThat(details.remotePercent()).isEqualTo(100);
 		assertThat(details.contractType()).isEqualTo("Freiberuflich");
@@ -52,8 +52,14 @@ class ProjectPageParserTest {
 		ProjectDetails details = parser.parse(fixture("with-duration-no-rate.html"));
 
 		assertThat(details.durationMonths()).isEqualTo(6);
-		// Ein fehlender Stundensatz ist null, nicht 0 — sonst zöge er jeden Schnitt nach unten.
-		assertThat(details.rateHourlyEur()).isNull();
+		// Ein fehlendes Budget ist null, nicht 0 — sonst zöge es jeden Schnitt nach unten.
+		assertThat(details.budgetEur()).isNull();
+	}
+
+	@Test
+	void treatsAZeroBudgetAsNoStatementAtAll() {
+		// Kommt echt vor: das Feld wurde leer gelassen und die Seite zeigt „0,00 €".
+		assertThat(parser.parse(page(badge("fa-euro-sign", "0,00 € Budget"))).budgetEur()).isNull();
 	}
 
 	@Test
@@ -71,7 +77,7 @@ class ProjectPageParserTest {
 
 	@Test
 	void keepsThousandsAndDecimalsApartInTheGermanNumberFormat() {
-		assertThat(parser.parse(page(badge("fa-euro-sign", "1.250,50 € Budget"))).rateHourlyEur())
+		assertThat(parser.parse(page(badge("fa-euro-sign", "1.250,50 € Budget"))).budgetEur())
 			.isEqualByComparingTo(new BigDecimal("1250.50"));
 	}
 
@@ -88,7 +94,7 @@ class ProjectPageParserTest {
 	void survivesAPageWithoutAnyOfTheExpectedMarkup() {
 		ProjectDetails details = parser.parse("<html><body><p>Wartungsarbeiten</p></body></html>");
 
-		assertThat(details.rateHourlyEur()).isNull();
+		assertThat(details.budgetEur()).isNull();
 		assertThat(details.durationMonths()).isNull();
 		assertThat(details.contractType()).isNull();
 		assertThat(details.description()).isNull();

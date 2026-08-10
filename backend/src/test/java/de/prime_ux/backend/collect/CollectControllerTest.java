@@ -14,6 +14,7 @@ import de.prime_ux.backend.analyze.AnalysisResult;
 import de.prime_ux.backend.analyze.AnalyzedSkill;
 import de.prime_ux.backend.analyze.OfferAnalyzer;
 import de.prime_ux.backend.analyze.OfferAssessment;
+import de.prime_ux.backend.offer.BudgetKind;
 import de.prime_ux.backend.offer.DetailStatus;
 import de.prime_ux.backend.offer.Offer;
 import de.prime_ux.backend.offer.OfferRepository;
@@ -215,10 +216,16 @@ class CollectControllerTest {
 			)
 		);
 
-		mockMvc.perform(post("/api/runs")).andExpect(status().isCreated());
+		mockMvc
+			.perform(post("/api/runs"))
+			.andExpect(status().isCreated())
+			// Der Lauf sagt, was er getan hat — sonst sieht ein Lauf ohne neue Mails wie ein Nulllauf aus.
+			.andExpect(jsonPath("$.detailsFetched").value(1))
+			.andExpect(jsonPath("$.detailsFailed").value(0));
 
 		Offer stored = offers.findAll().getFirst();
-		assertThat(stored.getRateHourlyEur()).isEqualByComparingTo("95.00");
+		assertThat(stored.getBudgetEur()).isEqualByComparingTo("95.00");
+		assertThat(stored.getBudgetKind()).isEqualTo(BudgetKind.HOURLY);
 		assertThat(stored.getDurationMonths()).isEqualTo(3);
 		assertThat(stored.getDescription()).isEqualTo("Beschreibung aus der Detailseite.");
 		assertThat(stored.getDetailStatus()).isEqualTo(DetailStatus.OK);

@@ -38,7 +38,7 @@ class ProjectPageServiceTest {
 		boolean fetched = service(url -> new PageSource.PageResult.Html(PAGE)).enrich(offer);
 
 		assertThat(fetched).isTrue();
-		assertThat(offer.getRateHourlyEur()).isEqualByComparingTo("85.00");
+		assertThat(offer.getBudgetEur()).isEqualByComparingTo("85.00");
 		assertThat(offer.getDurationMonths()).isEqualTo(4);
 		assertThat(offer.getRemotePercent()).isEqualTo(80);
 		assertThat(offer.getDescription()).isEqualTo("Ein Projekt.");

@@ -77,12 +77,12 @@
     "profile": "Profile",
     "collect": "Fetch & analyze mails",
     "messagesTitle": "Messages",
-    "lastRun": "Last run: {{newOffers}} new of {{totalSeen}} seen",
+    "lastRun": "Last run: {{newOffers}} new of {{totalSeen}} seen, {{details}} detail pages",
     "noRunYet": "No run yet — fetch mails now.",
     "collectError": "The run failed. Check the GMX credentials and connection.",
     "toast": {
       "successSummary": "Run completed",
-      "successDetail": "{{newOffers}} new offers imported from {{totalSeen}} mails · {{analyzed}} analyzed",
+      "successDetail": "{{newOffers}} new offers imported from {{totalSeen}} mails · {{analyzed}} analyzed · {{details}} detail pages fetched",
       "errorSummary": "Run failed"
     },
     "loadError": "Offers could not be loaded.",

@@ -77,12 +77,12 @@
     "profile": "Profil",
     "collect": "Mails abrufen & analysieren",
     "messagesTitle": "Nachrichten",
-    "lastRun": "Letzter Lauf: {{newOffers}} neu von {{totalSeen}} gesehen",
+    "lastRun": "Letzter Lauf: {{newOffers}} neu von {{totalSeen}} gesehen, {{details}} Detailseiten",
     "noRunYet": "Noch kein Lauf — jetzt Mails abrufen.",
     "collectError": "Der Lauf ist fehlgeschlagen. GMX-Zugangsdaten und Verbindung prüfen.",
     "toast": {
       "successSummary": "Lauf abgeschlossen",
-      "successDetail": "{{newOffers}} neue Angebote aus {{totalSeen}} Mails importiert · {{analyzed}} analysiert",
+      "successDetail": "{{newOffers}} neue Angebote aus {{totalSeen}} Mails importiert · {{analyzed}} analysiert · {{details}} Detailseiten geholt",
       "errorSummary": "Lauf fehlgeschlagen"
     },
     "loadError": "Angebote konnten nicht geladen werden.",

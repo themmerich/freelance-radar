@@ -38,7 +38,7 @@ public class ProjectPageParser {
 
 		String start = badgeText(document, "fa-calendar");
 		return new ProjectDetails(
-			rate(badgeText(document, "fa-euro-sign")),
+			budget(badgeText(document, "fa-euro-sign")),
 			months(badgeText(document, "fa-hourglass")),
 			percent(badgeText(document, "fa-briefcase")),
 			percent(badgeText(document, "fa-car-side")),
@@ -59,13 +59,19 @@ public class ProjectPageParser {
 		return null;
 	}
 
-	private BigDecimal rate(String text) {
+	/**
+	 * Rohwert des Budget-Badges. Ohne Einheit auf der Seite bleibt die Einordnung
+	 * (Stunden-, Tagessatz, Gesamtsumme) dem `BudgetKind` überlassen. 0 € ist ein leer
+	 * gelassenes Feld und damit keine Angabe.
+	 */
+	private BigDecimal budget(String text) {
 		Matcher matcher = match(MONEY, text);
 		if (matcher == null) {
 			return null;
 		}
 		String number = matcher.group(1).replace(".", "").replace(',', '.');
-		return new BigDecimal(number);
+		BigDecimal budget = new BigDecimal(number);
+		return budget.signum() <= 0 ? null : budget;
 	}
 
 	/** „Dauer 6 Monate" → 6, „Dauer 1 Jahr" → 12; alles andere null statt Rateversuch. */

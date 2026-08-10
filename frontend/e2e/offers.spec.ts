@@ -48,6 +48,8 @@ const RUN = {
   newOffers: 1,
   totalSeen: 1,
   analyzedOffers: 1,
+  detailsFetched: 2,
+  detailsFailed: 0,
   inputTokens: 12000,
   outputTokens: 800,
   note: 'since=2026-07-22',
@@ -93,15 +95,15 @@ test.describe('Offers dashboard e2e', () => {
 
   test('the messages popover shows the last run and closes on Escape', async ({ page }) => {
     await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
-    await expect(page.getByText('1 new offers imported from 1 mails · 1 analyzed')).toBeVisible();
+    await expect(page.getByText('1 new offers imported from 1 mails · 1 analyzed · 2 detail pages fetched')).toBeVisible();
 
     const bell = page.getByRole('button', { name: 'Messages' });
     await bell.click();
-    await expect(page.getByText('Last run: 1 new of 1 seen')).toBeVisible();
+    await expect(page.getByText('Last run: 1 new of 1 seen, 2 detail pages')).toBeVisible();
     await expect(bell).toHaveAttribute('aria-expanded', 'true');
 
     await page.keyboard.press('Escape');
-    await expect(page.getByText('Last run: 1 new of 1 seen')).toBeHidden();
+    await expect(page.getByText('Last run: 1 new of 1 seen, 2 detail pages')).toBeHidden();
     await expect(bell).toHaveAttribute('aria-expanded', 'false');
   });
 
@@ -109,7 +111,7 @@ test.describe('Offers dashboard e2e', () => {
     await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
 
     // Der Erfolgs-Toast meldet die Importzahlen; die Kosten haben jetzt ihre eigene Seite (/kosten).
-    await expect(page.getByText('1 new offers imported from 1 mails · 1 analyzed')).toBeVisible();
+    await expect(page.getByText('1 new offers imported from 1 mails · 1 analyzed · 2 detail pages fetched')).toBeVisible();
   });
 
   test('shows the kpi tiles and splits the ten charts across both tabs', async ({ page }) => {

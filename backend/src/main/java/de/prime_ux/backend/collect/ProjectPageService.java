@@ -1,6 +1,7 @@
 package de.prime_ux.backend.collect;
 
 import de.prime_ux.backend.collect.PageSource.PageResult;
+import de.prime_ux.backend.offer.BudgetKind;
 import de.prime_ux.backend.offer.DetailStatus;
 import de.prime_ux.backend.offer.Offer;
 import java.time.Instant;
@@ -57,7 +58,8 @@ public class ProjectPageService {
 	}
 
 	private void apply(Offer offer, ProjectDetails details) {
-		offer.setRateHourlyEur(details.rateHourlyEur());
+		offer.setBudgetEur(details.budgetEur());
+		offer.setBudgetKind(BudgetKind.of(details.budgetEur()));
 		offer.setDurationMonths(details.durationMonths());
 		offer.setUtilizationPercent(details.utilizationPercent());
 		offer.setRemotePercent(details.remotePercent());

@@ -142,7 +142,7 @@
             <ul class="m-0 flex list-none flex-col gap-1 p-0 text-sm text-surface-600 dark:text-surface-300">
               <li>
                 @if (offers.latestRun(); as run) {
-                  {{ t('offers.lastRun', { newOffers: run.newOffers, totalSeen: run.totalSeen }) }}
+                  {{ t('offers.lastRun', { newOffers: run.newOffers, totalSeen: run.totalSeen, details: run.detailsFetched }) }}
                 } @else {
                   {{ t('offers.noRunYet') }}
                 }
