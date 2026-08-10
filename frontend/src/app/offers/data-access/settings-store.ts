@@ -1,11 +1,14 @@
 import { Injectable, signal } from '@angular/core';
 
+import { TimeRange } from '../util/offer-stats';
+
 const STORAGE_KEY = 'freelance-radar.settings';
 
 type PersistedSettings = {
   greenThreshold: number;
   yellowThreshold: number;
   collapseDuplicates: boolean;
+  range: TimeRange;
 };
 
 const DEFAULTS: PersistedSettings = {
@@ -13,6 +16,8 @@ const DEFAULTS: PersistedSettings = {
   greenThreshold: 70,
   yellowThreshold: 40,
   collapseDuplicates: true,
+  // Auswertungsfenster des Dashboards; der Monat ist der Alltagsblick.
+  range: '30d',
 };
 
 /** Dashboard-Einstellungen (Ampel-Schwellen, Duplikat-Toggle), in localStorage persistiert. */
@@ -23,6 +28,7 @@ export class SettingsStore {
   readonly greenThreshold = () => this.state().greenThreshold;
   readonly yellowThreshold = () => this.state().yellowThreshold;
   readonly collapseDuplicates = () => this.state().collapseDuplicates;
+  readonly range = () => this.state().range;
   readonly settings = this.state.asReadonly();
 
   setGreenThreshold(value: number): void {
@@ -35,6 +41,10 @@ export class SettingsStore {
 
   setCollapseDuplicates(value: boolean): void {
     this.update({ collapseDuplicates: value });
+  }
+
+  setRange(value: TimeRange): void {
+    this.update({ range: value });
   }
 
   private update(patch: Partial<PersistedSettings>): void {
