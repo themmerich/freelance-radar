@@ -1,5 +1,6 @@
 package de.prime_ux.backend.collect;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -13,12 +14,15 @@ import de.prime_ux.backend.analyze.AnalysisResult;
 import de.prime_ux.backend.analyze.AnalyzedSkill;
 import de.prime_ux.backend.analyze.OfferAnalyzer;
 import de.prime_ux.backend.analyze.OfferAssessment;
+import de.prime_ux.backend.offer.DetailStatus;
+import de.prime_ux.backend.offer.Offer;
 import de.prime_ux.backend.offer.OfferRepository;
 import de.prime_ux.backend.run.RunRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,15 +36,19 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
-// Full slice against PostgreSQL (Testcontainers); the IMAP and Claude edges are
-// stubbed so neither a real mailbox nor ein API-Key needed. @Primary replaces
-// ImapService/ClaudeOfferAnalyzer.
-@SpringBootTest(properties = { "radar.state-dir=build/test-state", "spring.ai.anthropic.api-key=test-key" })
+// Full slice against PostgreSQL (Testcontainers); the IMAP, Claude and project-page edges
+// are stubbed so neither a real mailbox noch ein API-Key noch freelancermap gebraucht wird.
+// @Primary replaces ImapService/ClaudeOfferAnalyzer/HttpPageSource.
+@SpringBootTest(
+	properties = { "radar.state-dir=build/test-state", "spring.ai.anthropic.api-key=test-key", "radar.detail.delay-ms=0" }
+)
 @AutoConfigureMockMvc
 @Import({ TestcontainersConfiguration.class, CollectControllerTest.StubEdges.class })
 class CollectControllerTest {
 
 	private static final List<FetchedMail> MAILS = new ArrayList<>();
+	/** Lässt den gestubbten Seitenabruf für einen Test scheitern. */
+	private static final AtomicBoolean PAGE_FAILS = new AtomicBoolean(false);
 
 	@TestConfiguration(proxyBeanMethods = false)
 	static class StubEdges {
@@ -49,6 +57,26 @@ class CollectControllerTest {
 		@Primary
 		MailSource stubbedMailSource() {
 			return since -> List.copyOf(MAILS);
+		}
+
+		/**
+		 * Liefert für jedes Projekt dieselbe Faktenzeile — der Lauf darf freelancermap
+		 * niemals wirklich aufrufen.
+		 */
+		@Bean
+		@Primary
+		PageSource stubbedPageSource() {
+			String page =
+				"""
+				<html><body>
+				<div class="project-header-info-list">
+				  <span class="badge"><i class="far fa-euro-sign"></i>95,00 € Budget</span>
+				  <span class="badge"><i class="far fa-hourglass"></i>Dauer 3 Monate</span>
+				</div>
+				<div class="project-body-description"><h2>Beschreibung</h2><p>Beschreibung aus der Detailseite.</p></div>
+				</body></html>
+				""";
+			return url -> PAGE_FAILS.get() ? new PageSource.PageResult.Failed("Timeout") : new PageSource.PageResult.Html(page);
 		}
 
 		/** Bewertet jedes Angebot deterministisch: Score 85, ein Skill + ein Gap. */
@@ -93,6 +121,7 @@ class CollectControllerTest {
 	@BeforeEach
 	void reset() {
 		MAILS.clear();
+		PAGE_FAILS.set(false);
 		offers.deleteAll();
 		runs.deleteAll();
 	}
@@ -172,6 +201,51 @@ class CollectControllerTest {
 			.andExpect(jsonPath("$.totalSeen").value(1));
 
 		mockMvc.perform(get("/api/offers")).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(2)));
+	}
+
+	@Test
+	void fillsTheNewOffersFromTheirProjectPageAndCountsThemOnTheRun() throws Exception {
+		MAILS.add(
+			new FetchedMail(
+				"<offer-1@freelancermap.de>",
+				"office@freelancermap.de",
+				"Angular - Anzahl neue Projekte: 1",
+				Instant.parse("2026-07-23T06:35:00Z"),
+				agentMailBody(projectBlock("Angular Developer (m/w/d)", 3026991L))
+			)
+		);
+
+		mockMvc.perform(post("/api/runs")).andExpect(status().isCreated());
+
+		Offer stored = offers.findAll().getFirst();
+		assertThat(stored.getRateHourlyEur()).isEqualByComparingTo("95.00");
+		assertThat(stored.getDurationMonths()).isEqualTo(3);
+		assertThat(stored.getDescription()).isEqualTo("Beschreibung aus der Detailseite.");
+		assertThat(stored.getDetailStatus()).isEqualTo(DetailStatus.OK);
+		assertThat(runs.findAll().getFirst().getDetailsFetched()).isEqualTo(1);
+	}
+
+	@Test
+	void survivesAProjectPageThatCannotBeLoaded() throws Exception {
+		PAGE_FAILS.set(true);
+		MAILS.add(
+			new FetchedMail(
+				"<offer-1@freelancermap.de>",
+				"office@freelancermap.de",
+				"Angular - Anzahl neue Projekte: 1",
+				Instant.parse("2026-07-23T06:35:00Z"),
+				agentMailBody(projectBlock("Angular Developer (m/w/d)", 3026991L))
+			)
+		);
+
+		// Der Lauf läuft trotzdem durch — inklusive Analyse.
+		mockMvc.perform(post("/api/runs")).andExpect(status().isCreated()).andExpect(jsonPath("$.newOffers").value(1));
+
+		Offer stored = offers.findAll().getFirst();
+		// ERROR bleibt in der Warteschlange: der nächste Lauf versucht es erneut.
+		assertThat(stored.getDetailStatus()).isEqualTo(DetailStatus.ERROR);
+		assertThat(stored.getDescription()).isNull();
+		assertThat(runs.findAll().getFirst().getDetailsFailed()).isEqualTo(1);
 	}
 
 	@Test

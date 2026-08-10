@@ -86,7 +86,9 @@ class AnalysisServiceTest {
 		Offer newest = offers.save(newOffer("<new@fm.de>", "2026-07-23T08:00:00Z"));
 		Run run = runs.save(new Run(2, 2, "since=2026-07-23"));
 
-		analysis.analyzeNewOffers(run);
+		analysis.analyzeNewOffers(run.getId());
+		// Neu geladen: der Service arbeitet über die ID auf seiner eigenen Instanz.
+		run = runs.findById(run.getId()).orElseThrow();
 
 		// Ein Abruf-Lauf analysiert gegen alle Profile — hier zwei geseedete, also zählt der
 		// Deckel (1 Angebot/Lauf) für jedes einzeln: 2× analysiert, 2× Tokens, 2× Leftover-Hinweis.
@@ -140,7 +142,9 @@ class AnalysisServiceTest {
 		offers.save(copy);
 		Run run = runs.save(new Run(1, 1, "since=2026-07-23"));
 
-		analysis.analyzeNewOffers(run);
+		analysis.analyzeNewOffers(run.getId());
+		// Neu geladen: der Service arbeitet über die ID auf seiner eigenen Instanz.
+		run = runs.findById(run.getId()).orElseThrow();
 
 		assertThat(run.getAnalyzedOffers()).isZero();
 		assertThat(run.getInputTokens()).isZero();
