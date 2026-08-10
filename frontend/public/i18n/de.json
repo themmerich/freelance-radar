@@ -114,8 +114,12 @@
       "last7Days": "7 Tage",
       "last30Days": "30 Tage",
       "total": "Gesamt",
-      "averageScore": "Ø Match-Score",
-      "greenShare": "Anteil 🟢"
+      "averageScore": "Ø Match-Score (30 Tage)",
+      "greenShare": "Anteil 🟢 (30 Tage)",
+      "versusPrevious": "gegenüber der Vorperiode",
+      "noComparison": "kein Vergleich",
+      "deltaPercent": "{{value}} %",
+      "deltaPercentagePoints": "{{value}} %p"
     },
     "charts": {
       "perDay": "Angebote pro Tag",

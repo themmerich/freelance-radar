@@ -1,10 +1,13 @@
 import {
+  AVERAGE_SCORE,
+  OFFER_COUNT,
   averageScorePerAgent,
   averageScorePerBucket,
   averageWithCount,
   bucketFor,
   countByRemote,
   durationBuckets,
+  greenShareMetric,
   hourlyRates,
   rateBuckets,
   remotePercentBuckets,
@@ -14,6 +17,7 @@ import {
   offersPerBucket,
   scoreHistogram,
   topSkills,
+  trend,
   triggersPerAgent,
   withinRange,
 } from './offer-stats';
@@ -359,19 +363,83 @@ describe('offer-stats', () => {
     );
 
     expect(result.today).toBe(1);
-    expect(result.last7Days).toBe(2);
-    expect(result.last30Days).toBe(3);
+    expect(result.last7Days.value).toBe(2);
+    expect(result.last30Days.value).toBe(3);
     // Ohne Zeitfenster, aber nur analysiert — das Angebot vom Januar ist es nicht.
     expect(result.total).toBe(3);
-    expect(result.averageScore).toBe(60);
-    expect(result.greenShare).toBe(33);
+    // Beide Qualitätskacheln rechnen über 30 Tage; das Angebot vom Januar fällt heraus.
+    expect(result.averageScore.value).toBe(60);
+    expect(result.greenShare.value).toBe(33);
   });
 
   it('reports null score kpis while nothing is analyzed', () => {
     const result = kpis([offer({})], 70, TODAY);
 
     expect(result.total).toBe(0);
-    expect(result.averageScore).toBeNull();
-    expect(result.greenShare).toBeNull();
+    expect(result.averageScore.value).toBeNull();
+    expect(result.greenShare.value).toBeNull();
+  });
+
+  it('leaves today and total without a delta', () => {
+    const result = kpis([offer({ matchScore: 80 })], 70, TODAY);
+
+    expect(result.today).toBe(1);
+    expect(result.total).toBe(1);
+  });
+
+  // TODAY ist der 23.07. — das 7-Tage-Fenster reicht bis zum 17.07., dessen Vorperiode
+  // vom 10. bis zum 16.07. Die Trend-Fälle unten benennen ihre Angebote nur über den Tag.
+  function july(day: number, matchScore: number | null = null): StatsOffer {
+    return offer({ receivedAt: `2026-07-${day}T09:00:00`, matchScore });
+  }
+
+  const LONG_BEFORE = offer({ receivedAt: '2026-01-01T09:00:00' });
+
+  it('measures the previous period on the shifted window', () => {
+    const result = trend([july(23), july(22), july(18), july(12), july(10)], 7, OFFER_COUNT, TODAY);
+
+    expect(result.value).toBe(3);
+    expect(result.delta).toBe(50);
+  });
+
+  it('keeps the delta when the oldest offer starts exactly at the previous period', () => {
+    const result = trend([july(23), july(12), july(10)], 7, OFFER_COUNT, TODAY);
+
+    expect(result.delta).toBe(-50);
+  });
+
+  it('drops the delta when the oldest offer starts inside the previous period', () => {
+    const result = trend([july(23), july(12), july(11)], 7, OFFER_COUNT, TODAY);
+
+    expect(result.value).toBe(1);
+    expect(result.delta).toBeNull();
+  });
+
+  it('drops the relative delta when the previous period is empty', () => {
+    const result = trend([july(23), LONG_BEFORE], 7, OFFER_COUNT, TODAY);
+
+    expect(result.value).toBe(1);
+    expect(result.delta).toBeNull();
+  });
+
+  it('reports the score delta in points', () => {
+    const result = trend([july(23, 80), july(22, 60), july(12, 50), july(11, 60), july(10, 55)], 7, AVERAGE_SCORE, TODAY);
+
+    expect(result.value).toBe(70);
+    expect(result.delta).toBe(15);
+  });
+
+  it('reports the green share delta in percentage points', () => {
+    const result = trend([july(23, 80), july(22, 60), july(12, 90), july(11, 40), july(10, 30)], 7, greenShareMetric(70), TODAY);
+
+    expect(result.value).toBe(50);
+    expect(result.delta).toBe(17);
+  });
+
+  it('reports no score while nothing in the window is analyzed', () => {
+    const result = trend([july(23), LONG_BEFORE], 7, AVERAGE_SCORE, TODAY);
+
+    expect(result.value).toBeNull();
+    expect(result.delta).toBeNull();
   });
 });

@@ -91,16 +91,31 @@ export type BucketedAverages = { labels: string[]; averages: (number | null)[] }
 export type NamedCount = { name: string; count: number };
 /** Ø Match-Score pro Suchagent — nur analysierte Angebote fließen ein. */
 export type AgentScore = { name: string; averageScore: number };
+/**
+ * Kennzahl samt Veränderung zur gleich langen Vorperiode.
+ *
+ * `value` ist null, wenn das Fenster keine Grundlage hat (nichts analysiert); `delta` ist null,
+ * wenn kein ehrlicher Vergleich möglich ist — die drei Fälle stehen bei `trend`.
+ */
+export type Trend = { value: number | null; delta: number | null };
+
+/**
+ * Was gemessen wird, plus die Einheit der Differenz: Zählungen liest man relativ („+12 %"),
+ * Score und Anteil absolut (Punkte bzw. Prozentpunkte). Ein „+10 %" auf einen Prozentwert
+ * wäre zweideutig — Anteil der Angebote oder Anteil des Anteils?
+ */
+export type Metric = { measure: (offers: StatsOffer[]) => number | null; delta: 'relative' | 'absolute' };
+
 export type Kpis = {
   today: number;
-  last7Days: number;
-  last30Days: number;
+  last7Days: Trend;
+  last30Days: Trend;
   /** Alle analysierten Angebote ohne Zeitfenster — Kopien anderer Agenten zählen wie überall nicht mit. */
   total: number;
-  /** Ø Match-Score über analysierte Angebote; null solange nichts analysiert ist. */
-  averageScore: number | null;
-  /** Anteil 🟢 (Score ≥ Schwelle) in Prozent; null solange nichts analysiert ist. */
-  greenShare: number | null;
+  /** Ø Match-Score der letzten 30 Tage; null solange darin nichts analysiert ist. */
+  averageScore: Trend;
+  /** Anteil 🟢 (Score ≥ Schwelle) der letzten 30 Tage in Prozent; null solange darin nichts analysiert ist. */
+  greenShare: Trend;
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -427,25 +442,105 @@ export function scoreHistogram(offers: StatsOffer[]): number[] {
   return buckets;
 }
 
+function analyzedOffers(offers: StatsOffer[]): StatsOffer[] {
+  return offers.filter((offer) => offer.matchScore !== null);
+}
+
+/** Ø Match-Score, ungerundet; null solange nichts analysiert ist — eine 0 wäre eine Aussage, die niemand getroffen hat. */
+function averageScoreOf(offers: StatsOffer[]): number | null {
+  const analyzed = analyzedOffers(offers);
+  return analyzed.length === 0 ? null : analyzed.reduce((sum, offer) => sum + (offer.matchScore ?? 0), 0) / analyzed.length;
+}
+
+/** Anteil 🟢 in Prozent, ungerundet; null nach derselben Regel wie `averageScoreOf`. */
+function greenShareOf(offers: StatsOffer[], greenThreshold: number): number | null {
+  const analyzed = analyzedOffers(offers);
+  return analyzed.length === 0
+    ? null
+    : (analyzed.filter((offer) => (offer.matchScore ?? 0) >= greenThreshold).length / analyzed.length) * 100;
+}
+
+export const OFFER_COUNT: Metric = { measure: (offers) => offers.length, delta: 'relative' };
+
+export const AVERAGE_SCORE: Metric = { measure: averageScoreOf, delta: 'absolute' };
+
+/** Der 🟢-Anteil hängt an der einstellbaren Ampel-Schwelle und kann deshalb keine Konstante sein. */
+export function greenShareMetric(greenThreshold: number): Metric {
+  return { measure: (offers) => greenShareOf(offers, greenThreshold), delta: 'absolute' };
+}
+
+/** Datumsarithmetik statt Millisekunden, damit Sommerzeitwechsel die Fenstergrenze nicht verschieben. */
+function shiftDays(day: Date, days: number): Date {
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate() - days);
+}
+
+/** Angebote, deren Empfangstag in [start, end] liegt — beide Grenzen zählen mit. */
+function receivedBetween(offers: StatsOffer[], start: Date, end: Date): StatsOffer[] {
+  return offers.filter((offer) => {
+    const day = startOfDay(new Date(offer.receivedAt)).getTime();
+    return day >= start.getTime() && day <= end.getTime();
+  });
+}
+
+/** Tag des ältesten Angebots — der einzige Beleg dafür, ab wann überhaupt gesammelt wurde. */
+function oldestDay(offers: StatsOffer[]): Date | null {
+  return offers.reduce<Date | null>((oldest, offer) => {
+    const day = startOfDay(new Date(offer.receivedAt));
+    return oldest === null || day.getTime() < oldest.getTime() ? day : oldest;
+  }, null);
+}
+
+function round(value: number | null): number | null {
+  return value === null ? null : Math.round(value);
+}
+
+/** Erst die Differenz wird gerundet — sonst summierten sich zwei Rundungsfehler im Delta. */
+function deltaOf(current: number | null, previous: number | null, unit: Metric['delta']): number | null {
+  if (current === null || previous === null) {
+    return null;
+  }
+  if (unit === 'absolute') {
+    return Math.round(current - previous);
+  }
+  return previous === 0 ? null : Math.round(((current - previous) / previous) * 100);
+}
+
+/**
+ * Kennzahl über die letzten `days` Tage samt Veränderung zur gleich langen Vorperiode
+ * (heute zählt mit, wie bei allen Fenstern der Anwendung).
+ *
+ * Das Delta bleibt `null`, wo ein Vergleich nichts über den Markt aussagen würde:
+ *
+ * 1. Das älteste Angebot liegt nach dem Beginn der Vorperiode — dann misst das Delta den Aufbau
+ *    der Sammlung, nicht den Markt.
+ * 2. Die Vorperiode hat keine Grundlage (nichts analysiert).
+ * 3. Eine relative Änderung müsste durch null teilen.
+ *
+ * `offers` ist der gesamte Bestand, nicht ein Fenster daraus — Fall 1 braucht ihn ungeschnitten.
+ */
+export function trend(offers: StatsOffer[], days: number, metric: Metric, today: Date): Trend {
+  const end = startOfDay(today);
+  const current = metric.measure(receivedBetween(offers, shiftDays(end, days - 1), end));
+  const previousStart = shiftDays(end, 2 * days - 1);
+  const oldest = oldestDay(offers);
+
+  if (oldest === null || oldest.getTime() > previousStart.getTime()) {
+    return { value: round(current), delta: null };
+  }
+
+  const previous = metric.measure(receivedBetween(offers, previousStart, shiftDays(end, days)));
+  return { value: round(current), delta: deltaOf(current, previous, metric.delta) };
+}
+
 export function kpis(offers: StatsOffer[], greenThreshold: number, today: Date): Kpis {
   const todayStart = startOfDay(today).getTime();
-  const inWindow = (offer: StatsOffer, days: number): boolean =>
-    startOfDay(new Date(offer.receivedAt)).getTime() >= todayStart - (days - 1) * DAY_MS;
-
-  const analyzed = offers.filter((offer) => offer.matchScore !== null);
-  const averageScore =
-    analyzed.length === 0 ? null : Math.round(analyzed.reduce((sum, offer) => sum + (offer.matchScore ?? 0), 0) / analyzed.length);
-  const greenShare =
-    analyzed.length === 0
-      ? null
-      : Math.round((analyzed.filter((offer) => (offer.matchScore ?? 0) >= greenThreshold).length / analyzed.length) * 100);
 
   return {
-    today: offers.filter((offer) => inWindow(offer, 1)).length,
-    last7Days: offers.filter((offer) => inWindow(offer, 7)).length,
-    last30Days: offers.filter((offer) => inWindow(offer, 30)).length,
-    total: analyzed.length,
-    averageScore,
-    greenShare,
+    today: offers.filter((offer) => startOfDay(new Date(offer.receivedAt)).getTime() >= todayStart).length,
+    last7Days: trend(offers, 7, OFFER_COUNT, today),
+    last30Days: trend(offers, 30, OFFER_COUNT, today),
+    total: analyzedOffers(offers).length,
+    averageScore: trend(offers, 30, AVERAGE_SCORE, today),
+    greenShare: trend(offers, 30, greenShareMetric(greenThreshold), today),
   };
 }

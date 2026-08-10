@@ -47,6 +47,33 @@ const DUPLICATE_OFFER = {
   dupCount: 1,
 };
 
+function daysAgo(days: number): string {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
+/**
+ * Zeitgerüst für die Trend-Deltas der Kachel-Zeile: eines im laufenden 7-Tage-Fenster
+ * (vor 2 Tagen, zusammen mit OFFER also zwei), eines in dessen Vorperiode (vor 10 Tagen)
+ * und eines davor (vor 20 Tagen), das die Vorperiode überhaupt erst abdeckt.
+ * Alle drei ohne Score und ohne Budget, damit Gesamt, Ø Score, 🟢-Anteil und die
+ * Marktkennzahlen unberührt bleiben.
+ */
+const TREND_OFFERS = [2, 10, 20].map((days, index) => ({
+  ...OFFER,
+  id: 10 + index,
+  receivedAt: daysAgo(days),
+  projectUrl: `https://www.freelancermap.de/nproj/40000${index}.html`,
+  matchScore: null,
+  matchReason: null,
+  status: 'NEW',
+  budgetEur: null,
+  budgetKind: null,
+  durationMonths: null,
+  remotePercent: null,
+  skills: [],
+  dupCount: 1,
+}));
+
 const RUN = {
   id: 1,
   ranAt: '2026-07-22T10:00:00Z',
@@ -71,7 +98,7 @@ async function mockApi(page: Page): Promise<{ collected: () => boolean }> {
   let collected = false;
   await page.route('**/api/profiles', (route) => route.fulfill({ json: PROFILES }));
   await page.route('**/api/profiles/*/activate', (route) => route.fulfill({ json: { id: 2, name: 'Fullstack', active: true } }));
-  await page.route('**/api/offers', (route) => route.fulfill({ json: collected ? [OFFER, DUPLICATE_OFFER] : [] }));
+  await page.route('**/api/offers', (route) => route.fulfill({ json: collected ? [OFFER, DUPLICATE_OFFER, ...TREND_OFFERS] : [] }));
   await page.route('**/api/runs/latest', (route) => (collected ? route.fulfill({ json: RUN }) : route.fulfill({ status: 204 })));
   await page.route('**/api/runs', (route) => {
     collected = true;
@@ -122,10 +149,10 @@ test.describe('Offers dashboard e2e', () => {
   test('shows the kpi tiles and splits the twelve charts across both tabs', async ({ page }) => {
     await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
 
-    // exact — „Avg match score per day/agent" sind seither auch Chart-Titel.
-    await expect(page.getByText('Avg match score', { exact: true })).toBeVisible();
+    await expect(page.getByText('Avg match score (30 days)')).toBeVisible();
     // Ein analysiertes Angebot mit Score 85 bei Schwelle 70 → Anteil 🟢 = 100 %.
-    await expect(page.getByText('100 %')).toBeVisible();
+    // Auf die Kachel eingegrenzt, seit „+100 %" auch als Trend-Delta vorkommen kann.
+    await expect(page.locator('dl > div').filter({ hasText: 'Share 🟢' })).toContainText('100 %');
     // Gesamt zählt ohne Zeitfenster; die Kopie des zweiten Agenten bleibt außen vor.
     await expect(page.locator('dl > div').filter({ hasText: 'Total' })).toContainText('1');
 
@@ -139,7 +166,22 @@ test.describe('Offers dashboard e2e', () => {
     await page.getByRole('tab', { name: 'Agent analysis' }).click();
 
     await expect(page.getByRole('tabpanel').locator('canvas')).toHaveCount(5);
-    await expect(page.getByText('Avg match score', { exact: true })).toBeVisible();
+    await expect(page.getByText('Avg match score (30 days)')).toBeVisible();
+  });
+
+  test('the kpi tiles compare against the previous period, or say why they cannot', async ({ page }) => {
+    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
+
+    // Am Anfang verankert: „(30 days)" steht seit der Umdeutung auch in den beiden Qualitätskacheln.
+    const sevenDays = page.locator('dl > div').filter({ hasText: /^7 days/ });
+    const thirtyDays = page.locator('dl > div').filter({ hasText: /^30 days/ });
+
+    // Siehe TREND_OFFERS: im 7-Tage-Fenster stehen 2 Angebote gegen 1 in der Vorperiode.
+    await expect(sevenDays).toContainText('+100 %');
+    await expect(sevenDays).toContainText('versus previous period');
+
+    // Die Vorperiode der 30-Tage-Kachel liegt vor dem ältesten Angebot — kein ehrlicher Vergleich.
+    await expect(thirtyDays).toContainText('no comparison');
   });
 
   test('the time range switches the resolution and survives a reload', async ({ page }) => {

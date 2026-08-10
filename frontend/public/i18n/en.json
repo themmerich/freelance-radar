@@ -114,8 +114,12 @@
       "last7Days": "7 days",
       "last30Days": "30 days",
       "total": "Total",
-      "averageScore": "Avg match score",
-      "greenShare": "Share 🟢"
+      "averageScore": "Avg match score (30 days)",
+      "greenShare": "Share 🟢 (30 days)",
+      "versusPrevious": "versus previous period",
+      "noComparison": "no comparison",
+      "deltaPercent": "{{value}} %",
+      "deltaPercentagePoints": "{{value}} pp"
     },
     "charts": {
       "perDay": "Offers per day",

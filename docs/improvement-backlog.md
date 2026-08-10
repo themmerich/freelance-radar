@@ -22,10 +22,9 @@ Gemessen am Bestand vom 2026-08-09 (428 primäre Angebote seit 2026-07-20):
 
 ## A. Fundament
 
-1. **Collect-Automatisierung** _(Roadmap-Punkt, vorziehen — größter Hebel, kostet keine Tokens)_
-   Täglicher Collect-Lauf per Task Scheduler: nur Abruf + Dedup, die kostenpflichtige
-   Analyse bleibt manuell. Ohne lückenlose Sammlung ist keine Zeitreihe über Monate
-   belastbar; „heute/7 Tage"-KPIs stimmen nur nach frischem Abruf.
+1. ~~**Collect-Automatisierung**~~ — **verworfen am 2026-08-10**, der Collect-Lauf bleibt
+   Handarbeit. Damit bleibt die Einschränkung bestehen: „heute/7 Tage"-KPIs stimmen nur nach
+   frischem Abruf, und Lücken in der Sammlung schlagen auf jede Zeitreihe durch.
 
 2. ~~**Rate und Laufzeit über die Analyse extrahieren statt per Regex**~~ — **erledigt am
    2026-08-10, aber anders als hier vermutet.** Die Annahme, die Regex greife nicht, war
@@ -49,9 +48,14 @@ Gemessen am Bestand vom 2026-08-09 (428 primäre Angebote seit 2026-07-20):
    stellen um; die Auflösung wandert mit (Tage → Wochen → Monate). Entwurf:
    [`2026-08-10-dashboard-zeitraum-design.md`](superpowers/specs/2026-08-10-dashboard-zeitraum-design.md).
 
-5. **Trend-Deltas in den KPI-Kacheln** _(kleiner Eingriff, rein Frontend)_
-   „30 Tage: 428 (+12 % ggü. Vorperiode)", ebenso für Ø Score und 🟢-Anteil —
-   erst das Delta macht aus der Kachel eine Marktaussage.
+5. ~~**Trend-Deltas in den KPI-Kacheln**~~ — **erledigt am 2026-08-10.** „7 Tage" und
+   „30 Tage" tragen das relative Delta zur gleich langen Vorperiode, Ø Score und 🟢-Anteil
+   das absolute (Punkte bzw. Prozentpunkte). Beide Qualitätskacheln zeigen dafür statt des
+   Allzeit-Werts die letzten 30 Tage — sonst würden Wert und Delta Verschiedenes messen.
+   Das Delta entfällt, solange der Bestand die Vorperiode nicht deckt: bei den drei
+   30-Tage-Kacheln also bis zum 2026-09-17, weil die Sammlung erst am 2026-07-20 begann.
+   Entwurf:
+   [`2026-08-10-kpi-trend-deltas-design.md`](superpowers/specs/2026-08-10-kpi-trend-deltas-design.md).
 
 6. **Skill-Trends über Zeit** _(Roadmap-Punkt „Wochen-Trend je Skill")_
    Top-Skills als Zeitreihe (Nennungen pro Woche/Monat, steigend/fallend) statt nur
@@ -81,11 +85,13 @@ Gemessen am Bestand vom 2026-08-09 (428 primäre Angebote seit 2026-07-20):
 
 Für Mehrjahres-Trends fehlt kein Code, sondern Datenhistorie (Sammlung läuft seit
 2026-07-20). Postgres ist die dauerhafte Quelle, das 12-Monats-Chart füllt sich von
-selbst — deshalb Punkt 1 zuerst: je früher lückenlos gesammelt wird, desto früher
+selbst. Weil der Collect-Lauf Handarbeit bleibt (Punkt 1), hängt die Belastbarkeit
+dieser Auswertungen daran, wie regelmäßig abgerufen wird — je lückenloser, desto eher
 werden Saisonalität und Jahresvergleiche möglich.
 
 ## Empfohlene Reihenfolge
 
-1 (Automatisierung) → 2 (Rate/Laufzeit) → 5 (Deltas) → 6 (Skill-Trends) →
-4 (Zeitraum-Umschalter) → Rest. Die Punkte 1, 2, 5 und 7 sind jeweils überschaubare
-eigene PRs.
+Erledigt sind 2 (Rate/Laufzeit), 4 (Zeitraum-Umschalter) und 5 (Deltas); 1 (Automatisierung)
+ist verworfen. Offen und in dieser Reihenfolge sinnvoll:
+6 (Skill-Trends) → 7 (brachliegende Felder) → 3 (`industry`) → Rest.
+Die Punkte 6 und 7 sind jeweils überschaubare eigene PRs.

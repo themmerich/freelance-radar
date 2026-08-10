@@ -20,8 +20,12 @@ const en = {
       last7Days: '7 days',
       last30Days: '30 days',
       total: 'Total',
-      averageScore: 'Avg match score',
-      greenShare: 'Share 🟢',
+      averageScore: 'Avg match score (30 days)',
+      greenShare: 'Share 🟢 (30 days)',
+      versusPrevious: 'versus previous period',
+      noComparison: 'no comparison',
+      deltaPercent: '{{value}} %',
+      deltaPercentagePoints: '{{value}} pp',
     },
     charts: {
       perDay: 'Offers per day',
@@ -243,6 +247,18 @@ describe('OffersPage', () => {
     ]);
     expect(offerCharts(fixture).bucket()).toBe('month');
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Offers per month');
+  });
+
+  it('keeps the kpi tiles at their fixed windows while the charts follow the range', () => {
+    const fixture = createFixture();
+    const tiles = (fixture.nativeElement as HTMLElement).querySelector('app-kpi-tiles') as HTMLElement;
+    const before = tiles.textContent;
+
+    range.set('all');
+    fixture.detectChanges();
+
+    expect(offerCharts(fixture).bucket()).toBe('month');
+    expect(tiles.textContent).toBe(before);
   });
 
   it('splits the charts into a global and an agent tab', () => {
