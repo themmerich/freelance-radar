@@ -128,14 +128,16 @@
       "scoreTrendDay": "Avg match score per day",
       "scoreTrendWeek": "Avg match score per week",
       "scoreTrendMonth": "Avg match score per month",
-      "remote": "Remote share",
       "remoteUnknown": "Unknown",
       "agents": "Triggers per agent",
       "agentScores": "Avg match score per agent",
       "roles": "Requested job profiles",
       "topSkills": "Top requested skills",
       "topGaps": "Top skill gaps",
-      "scores": "Match score distribution"
+      "scores": "Match score distribution",
+      "remoteShare": "Remote share of the projects",
+      "durations": "Duration in months ({{count}} offers)",
+      "rates": "Hourly rate distribution ({{count}} offers)"
     },
     "range": {
       "label": "Time range",
@@ -203,6 +205,12 @@
       "NEW": "New",
       "ANALYZED": "Analyzed",
       "ERROR": "Error"
+    },
+    "market": {
+      "rate": "Avg hourly rate",
+      "duration": "Avg duration",
+      "remote": "Avg remote share",
+      "basis": "from {{count}} offers"
     }
   },
   "costs": {

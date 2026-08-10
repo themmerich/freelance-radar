@@ -128,14 +128,16 @@
       "scoreTrendDay": "Ø Match-Score pro Tag",
       "scoreTrendWeek": "Ø Match-Score pro Woche",
       "scoreTrendMonth": "Ø Match-Score pro Monat",
-      "remote": "Remote-Anteil",
       "remoteUnknown": "Unbekannt",
       "agents": "Trigger pro Agent",
       "agentScores": "Ø Match-Score pro Agent",
       "roles": "Angefragte Berufsprofile",
       "topSkills": "Top nachgefragte Skills",
       "topGaps": "Top Skill-Gaps",
-      "scores": "Match-Score-Verteilung"
+      "scores": "Match-Score-Verteilung",
+      "remoteShare": "Remote-Anteil der Projekte",
+      "durations": "Laufzeit in Monaten ({{count}} Angebote)",
+      "rates": "Stundensatz-Verteilung ({{count}} Angebote)"
     },
     "range": {
       "label": "Zeitraum",
@@ -203,6 +205,12 @@
       "NEW": "Neu",
       "ANALYZED": "Analysiert",
       "ERROR": "Fehler"
+    },
+    "market": {
+      "rate": "Ø Stundensatz",
+      "duration": "Ø Laufzeit",
+      "remote": "Ø Remote-Anteil",
+      "basis": "aus {{count}} Angeboten"
     }
   },
   "costs": {
