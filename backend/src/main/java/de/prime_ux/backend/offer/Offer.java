@@ -8,7 +8,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
@@ -104,6 +106,41 @@ public class Offer {
 
 	@Column(name = "raw_body", columnDefinition = "text")
 	private String rawBody;
+
+	// --- Von der Projekt-Detailseite (die Mail selbst führt diese Felder nicht) ---
+
+	@Column(name = "rate_hourly_eur", precision = 8, scale = 2)
+	private BigDecimal rateHourlyEur;
+
+	@Column(name = "duration_months")
+	private Integer durationMonths;
+
+	@Column(name = "utilization_percent")
+	private Integer utilizationPercent;
+
+	@Column(name = "remote_percent")
+	private Integer remotePercent;
+
+	@Column(name = "contract_type", columnDefinition = "text")
+	private String contractType;
+
+	/** Erster Tag des genannten Startmonats; null bei „ab sofort" oder fehlender Angabe. */
+	@Column(name = "start_month")
+	private LocalDate startMonth;
+
+	@Column(name = "start_immediate", nullable = false)
+	private boolean startImmediate = false;
+
+	/** Projektbeschreibung — Grundlage der Claude-Analyse, sobald sie vorliegt. */
+	@Column(columnDefinition = "text")
+	private String description;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "detail_status", nullable = false, columnDefinition = "text")
+	private DetailStatus detailStatus = DetailStatus.PENDING;
+
+	@Column(name = "detail_fetched_at")
+	private Instant detailFetchedAt;
 
 	protected Offer() {
 		// Required by JPA.

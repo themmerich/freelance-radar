@@ -41,6 +41,12 @@ public class Run {
 	@Column(name = "output_tokens", nullable = false)
 	private long outputTokens;
 
+	@Column(name = "details_fetched", nullable = false)
+	private int detailsFetched;
+
+	@Column(name = "details_failed", nullable = false)
+	private int detailsFailed;
+
 	@Column(columnDefinition = "text")
 	private String note;
 
