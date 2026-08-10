@@ -77,14 +77,9 @@ export type BucketedCounts = { labels: string[]; counts: number[]; average: numb
 /** Ø Match-Score je Bucket; Buckets ohne analysierte Angebote sind `null` (Lücke im Linien-Chart). */
 export type BucketedAverages = { labels: string[]; averages: (number | null)[] };
 
-export type DailyCounts = { labels: string[]; counts: number[] };
-/** Anfragen pro Monat plus deren Schnitt über das gesamte Fenster (eine Nachkommastelle). */
-export type MonthlyCounts = { labels: string[]; counts: number[]; average: number };
 export type NamedCount = { name: string; count: number };
 /** Ø Match-Score pro Suchagent — nur analysierte Angebote fließen ein. */
 export type AgentScore = { name: string; averageScore: number };
-/** Ø Match-Score pro Tag; Tage ohne analysierte Angebote sind `null` (Lücke im Linien-Chart). */
-export type DailyAverages = { labels: string[]; averages: (number | null)[] };
 export type Kpis = {
   today: number;
   last7Days: number;
@@ -101,76 +96,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-/** Index des Angebots im Tagesfenster ab `start`; außerhalb liegende Werte fallen aus [0, days). */
-function dayIndex(offer: StatsOffer, start: number): number {
-  return Math.floor((startOfDay(new Date(offer.receivedAt)).getTime() - start) / DAY_MS);
-}
-
-function dayLabels(start: number, days: number): string[] {
-  return Array.from({ length: days }, (_, i) => {
-    const d = new Date(start + i * DAY_MS);
-    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.`;
-  });
-}
-
-/** Angebote pro Tag über die letzten `days` Tage (älteste zuerst, Lücken = 0). */
-export function offersPerDay(offers: StatsOffer[], days: number, today: Date): DailyCounts {
-  const start = startOfDay(today).getTime() - (days - 1) * DAY_MS;
-  const counts = new Array<number>(days).fill(0);
-  for (const offer of offers) {
-    const index = dayIndex(offer, start);
-    if (index >= 0 && index < days) {
-      counts[index] += 1;
-    }
-  }
-  return { labels: dayLabels(start, days), counts };
-}
-
-function monthLabels(start: Date, months: number): string[] {
-  return Array.from({ length: months }, (_, i) => {
-    const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
-    return `${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getFullYear()).slice(2)}`;
-  });
-}
-
-/**
- * Anfragen pro Monat über die letzten `months` Monate (ältester zuerst, Lücken = 0) samt
- * Monatsschnitt. Der Schnitt teilt durch das volle Fenster, nicht durch die Monate mit
- * Angeboten — angefragt ist der Durchschnitt der letzten 12 Monate, leere Monate zählen mit.
- */
-export function offersPerMonth(offers: StatsOffer[], months: number, today: Date): MonthlyCounts {
-  const start = new Date(today.getFullYear(), today.getMonth() - (months - 1), 1);
-  const counts = new Array<number>(months).fill(0);
-  for (const offer of offers) {
-    const received = new Date(offer.receivedAt);
-    const index = (received.getFullYear() - start.getFullYear()) * 12 + (received.getMonth() - start.getMonth());
-    if (index >= 0 && index < months) {
-      counts[index] += 1;
-    }
-  }
-  const total = counts.reduce((sum, count) => sum + count, 0);
-  return { labels: monthLabels(start, months), counts, average: Math.round((total / months) * 10) / 10 };
-}
-
-/** Ø Match-Score pro Tag über die letzten `days` Tage (älteste zuerst, gerundet). */
-export function averageScorePerDay(offers: StatsOffer[], days: number, today: Date): DailyAverages {
-  const start = startOfDay(today).getTime() - (days - 1) * DAY_MS;
-  const sums = new Array<number>(days).fill(0);
-  const counts = new Array<number>(days).fill(0);
-  for (const offer of offers) {
-    if (offer.matchScore === null) {
-      continue;
-    }
-    const index = dayIndex(offer, start);
-    if (index >= 0 && index < days) {
-      sums[index] += offer.matchScore;
-      counts[index] += 1;
-    }
-  }
-  const averages = counts.map((count, i) => (count === 0 ? null : Math.round(sums[i] / count)));
-  return { labels: dayLabels(start, days), averages };
 }
 
 const BUCKET_PER_RANGE: Record<TimeRange, Bucket> = { '30d': 'day', '90d': 'week', '12m': 'month', all: 'month' };

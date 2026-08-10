@@ -1,15 +1,12 @@
 import {
   averageScorePerAgent,
   averageScorePerBucket,
-  averageScorePerDay,
   bucketFor,
   countByRemote,
   countByRoleCategory,
   roleCategory,
   kpis,
   offersPerBucket,
-  offersPerDay,
-  offersPerMonth,
   scoreHistogram,
   topSkills,
   triggersPerAgent,
@@ -34,51 +31,6 @@ function offer(overrides: Partial<StatsOffer>): StatsOffer {
 }
 
 describe('offer-stats', () => {
-  it('counts offers per day over the window and fills gaps with zero', () => {
-    const result = offersPerDay(
-      [offer({}), offer({}), offer({ receivedAt: '2026-07-21T23:59:00' }), offer({ receivedAt: '2026-06-01T00:00:00' })],
-      3,
-      TODAY,
-    );
-
-    expect(result.labels).toEqual(['21.07.', '22.07.', '23.07.']);
-    expect(result.counts).toEqual([1, 0, 2]);
-  });
-
-  it('counts offers per month and averages them over the whole window', () => {
-    const result = offersPerMonth(
-      [
-        offer({}),
-        offer({}),
-        offer({ receivedAt: '2026-05-14T10:00:00' }),
-        // Genau am Fensterrand (12 Monate zurück) — zählt noch mit.
-        offer({ receivedAt: '2025-08-31T23:00:00' }),
-        // Einen Monat zu alt — fällt heraus.
-        offer({ receivedAt: '2025-07-31T23:00:00' }),
-      ],
-      12,
-      TODAY,
-    );
-
-    expect(result.labels).toEqual([
-      '08.25',
-      '09.25',
-      '10.25',
-      '11.25',
-      '12.25',
-      '01.26',
-      '02.26',
-      '03.26',
-      '04.26',
-      '05.26',
-      '06.26',
-      '07.26',
-    ]);
-    expect(result.counts).toEqual([1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2]);
-    // 4 Anfragen im Fenster, geteilt durch alle 12 Monate — leere Monate zählen mit.
-    expect(result.average).toBe(0.3);
-  });
-
   // TODAY ist ein Donnerstag; die laufende Woche beginnt am Montag, dem 20.07.2026.
   describe('time ranges', () => {
     it('maps every range to its resolution', () => {
@@ -203,23 +155,6 @@ describe('offer-stats', () => {
     ]);
 
     expect(result).toEqual([2, 0, 1, 1]);
-  });
-
-  it('averages scores per day and leaves days without analyzed offers null', () => {
-    const result = averageScorePerDay(
-      [
-        offer({ matchScore: 70 }),
-        offer({ matchScore: 75 }),
-        offer({ matchScore: null }),
-        offer({ receivedAt: '2026-07-21T08:00:00', matchScore: 40 }),
-        offer({ receivedAt: '2026-06-01T00:00:00', matchScore: 100 }),
-      ],
-      3,
-      TODAY,
-    );
-
-    expect(result.labels).toEqual(['21.07.', '22.07.', '23.07.']);
-    expect(result.averages).toEqual([40, null, 73]);
   });
 
   it('averages scores per agent descending and skips unanalyzed or non-agent offers', () => {
