@@ -39,9 +39,9 @@ Gemessen am Bestand vom 2026-08-09 (428 primäre Angebote seit 2026-07-20):
 
 ## B. Marktauswertungen
 
-4. **Wählbarer Zeitraum statt fest verdrahteter Fenster**
-   Umschalter „30 Tage / 90 Tage / 12 Monate / Alles" über dem Dashboard, alle Charts
-   stellen um; Aggregation wechselt mit dem Fenster (Tage → Wochen → Monate).
+4. ~~**Wählbarer Zeitraum statt fest verdrahteter Fenster**~~ — **erledigt am 2026-08-10.**
+   Umschalter „30 Tage / 90 Tage / 12 Monate / Alles" über den Tabs, alle Charts beider Tabs
+   stellen um; die Auflösung wandert mit (Tage → Wochen → Monate).
 
 5. **Trend-Deltas in den KPI-Kacheln** _(kleiner Eingriff, rein Frontend)_
    „30 Tage: 428 (+12 % ggü. Vorperiode)", ebenso für Ø Score und 🟢-Anteil —

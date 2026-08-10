@@ -112,7 +112,7 @@ test.describe('Offers dashboard e2e', () => {
     await expect(page.getByText('1 new offers imported from 1 mails · 1 analyzed')).toBeVisible();
   });
 
-  test('shows the kpi tiles and splits the twelve charts across both tabs', async ({ page }) => {
+  test('shows the kpi tiles and splits the ten charts across both tabs', async ({ page }) => {
     await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
 
     // exact — „Avg match score per day/agent" sind seither auch Chart-Titel.
@@ -122,13 +122,32 @@ test.describe('Offers dashboard e2e', () => {
     // Gesamt zählt ohne Zeitfenster; die Kopie des zweiten Agenten bleibt außen vor.
     await expect(page.locator('dl > div').filter({ hasText: 'Total' })).toContainText('1');
 
-    // Die KPI-Kacheln stehen über beiden Tabs; die 6 globalen Charts liegen im Auftakt-Tab.
-    await expect(page.getByRole('tabpanel').locator('canvas')).toHaveCount(6);
+    // Die KPI-Kacheln stehen über beiden Tabs; die 5 globalen Charts liegen im Auftakt-Tab.
+    await expect(page.getByRole('tabpanel').locator('canvas')).toHaveCount(5);
 
     await page.getByRole('tab', { name: 'Agent analysis' }).click();
 
-    await expect(page.getByRole('tabpanel').locator('canvas')).toHaveCount(6);
+    await expect(page.getByRole('tabpanel').locator('canvas')).toHaveCount(5);
     await expect(page.getByText('Avg match score', { exact: true })).toBeVisible();
+  });
+
+  test('the time range switches the resolution and survives a reload', async ({ page }) => {
+    await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
+
+    // Auftakt sind 30 Tage — Tagesbalken.
+    await expect(page.getByText('Offers per day')).toBeVisible();
+
+    // Das Radio liegt visuell verborgen unter seinem Label — geklickt wird, wie im Browser, das Label.
+    await page.getByText('90 days', { exact: true }).click();
+
+    await expect(page.getByText('Offers per week')).toBeVisible();
+    await expect(page.getByText('Offers per day')).toBeHidden();
+
+    // Das Fenster liegt im localStorage, überlebt also den Reload.
+    await page.reload();
+
+    await expect(page.getByRole('radio', { name: '90 days' })).toBeChecked();
+    await expect(page.getByText('Offers per week')).toBeVisible();
   });
 
   test('switching the profile activates it and reloads the offers', async ({ page }) => {
