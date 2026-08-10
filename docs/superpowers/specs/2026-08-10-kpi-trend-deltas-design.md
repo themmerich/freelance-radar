@@ -142,7 +142,13 @@ Heute    7 Tage        30 Tage             Gesamt   Ø Match-Score (30 Tage)   A
   kommentieren wäre Rauschen.
 
 Die Kachel-Zeile bleibt bei sechs Einträgen und demselben Grid; das Delta steht in derselben
-`<dd>` neben dem Wert, die Zeilenhöhe ändert sich nicht.
+`<dd>` neben dem Wert.
+
+> **Nachtrag aus der Umsetzung:** Die Annahme „die Zeilenhöhe ändert sich nicht" war falsch.
+> „(30 Tage)" lässt die Beschriftung der beiden Qualitätskacheln in den schmalen Spalten
+> umbrechen, wodurch deren Werte tiefer standen als die der übrigen vier. Das `<dt>`
+> reserviert deshalb fest zwei Zeilen (`min-h-10`) — in der schmalen Ansicht brauchen ohnehin
+> alle sechs Beschriftungen zwei Zeilen.
 
 ## Übersetzungen
 
