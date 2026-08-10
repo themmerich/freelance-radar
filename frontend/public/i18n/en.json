@@ -100,6 +100,10 @@
       "country": "Country",
       "location": "Location",
       "remote": "Remote",
+      "rate": "Rate",
+      "ratePerHour": "{{rate}} €/h",
+      "duration": "Duration",
+      "durationMonths": "{{months}} mo.",
       "status": "Status",
       "pageReport": "{first}–{last} of {totalRecords}",
       "filterAll": "All",
@@ -124,14 +128,16 @@
       "scoreTrendDay": "Avg match score per day",
       "scoreTrendWeek": "Avg match score per week",
       "scoreTrendMonth": "Avg match score per month",
-      "remote": "Remote share",
       "remoteUnknown": "Unknown",
       "agents": "Triggers per agent",
       "agentScores": "Avg match score per agent",
       "roles": "Requested job profiles",
       "topSkills": "Top requested skills",
       "topGaps": "Top skill gaps",
-      "scores": "Match score distribution"
+      "scores": "Match score distribution",
+      "remoteShare": "Remote share of the projects",
+      "durations": "Duration in months ({{count}} offers)",
+      "rates": "Hourly rate distribution ({{count}} offers)"
     },
     "range": {
       "label": "Time range",
@@ -153,13 +159,21 @@
       "yellowFrom": "from",
       "collapseDuplicates": "Collapse duplicates"
     },
+    "budgetKind": {
+      "HOURLY": "{{amount}} € per hour",
+      "DAILY": "{{amount}} € per day",
+      "TOTAL": "{{amount}} € total"
+    },
     "detail": {
       "notAnalyzed": "Not analyzed yet.",
       "skills": "Skills (red = missing from profile)",
       "role": "Role per analysis",
-      "rate": "Rate",
+      "budget": "Budget",
       "start": "Start",
-      "duration": "Duration"
+      "startImmediate": "immediately",
+      "duration": "Duration",
+      "utilization": "Utilisation",
+      "remoteShare": "Remote share"
     },
     "source": {
       "AGENT": "Agent",
@@ -191,6 +205,12 @@
       "NEW": "New",
       "ANALYZED": "Analyzed",
       "ERROR": "Error"
+    },
+    "market": {
+      "rate": "Avg hourly rate",
+      "duration": "Avg duration",
+      "remote": "Avg remote share",
+      "basis": "from {{count}} offers"
     }
   },
   "costs": {

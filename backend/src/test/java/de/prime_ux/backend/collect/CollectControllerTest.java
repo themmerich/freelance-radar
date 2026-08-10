@@ -192,7 +192,14 @@ class CollectControllerTest {
 			.andExpect(jsonPath("$[0].matchScore").value(85))
 			.andExpect(jsonPath("$[0].matchReason").value("Passt gut zum Profil (Frontend Architect & Angular Lead)."))
 			.andExpect(jsonPath("$[0].skills", hasSize(2)))
-			.andExpect(jsonPath("$[0].skills[?(@.name=='Kotlin')].gap", contains(true)));
+			.andExpect(jsonPath("$[0].skills[?(@.name=='Kotlin')].gap", contains(true)))
+			// Die Felder der Detailseite gehen jetzt raus …
+			.andExpect(jsonPath("$[0].budgetEur").value(95.0))
+			.andExpect(jsonPath("$[0].budgetKind").value("HOURLY"))
+			.andExpect(jsonPath("$[0].durationMonths").value(3))
+			// … und die beiden toten Textfelder aus dem Mail-Parser nicht mehr.
+			.andExpect(jsonPath("$[0].rate").doesNotExist())
+			.andExpect(jsonPath("$[0].duration").doesNotExist());
 
 		// Second run with the same mail: Message-ID dedup keeps the offer count at 2.
 		mockMvc

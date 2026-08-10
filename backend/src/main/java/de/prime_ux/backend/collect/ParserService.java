@@ -76,16 +76,8 @@ public class ParserService {
 		"(?:einsatzort|standort|ort)[:\\s]+([A-Za-zÄÖÜäöüß.\\- ]{2,40})",
 		Pattern.CASE_INSENSITIVE
 	);
-	private static final Pattern FALLBACK_RATE = Pattern.compile(
-		"(?:stundensatz|tagessatz|rate|vergütung)[:\\s]*([0-9.,]+\\s*(?:€|eur)[^\\n]{0,20})",
-		Pattern.CASE_INSENSITIVE
-	);
 	private static final Pattern FALLBACK_START = Pattern.compile(
 		"(?:start|beginn|projektstart)[:\\s]+([A-Za-z0-9./ ]{3,25})",
-		Pattern.CASE_INSENSITIVE
-	);
-	private static final Pattern FALLBACK_DURATION = Pattern.compile(
-		"(?:dauer|laufzeit|projektdauer)[:\\s]+([A-Za-z0-9./ ]{2,30})",
 		Pattern.CASE_INSENSITIVE
 	);
 
@@ -125,9 +117,7 @@ public class ParserService {
 					firstGroup(BLOCK_COMPANY, block),
 					firstGroup(BLOCK_LOCATION, block),
 					remoteFromPercent(firstGroup(BLOCK_REMOTE, block)),
-					null,
 					firstGroup(BLOCK_START, block),
-					null,
 					Long.valueOf(url.group(1)),
 					url.group()
 				)
@@ -201,9 +191,7 @@ public class ParserService {
 			null,
 			firstGroup(FALLBACK_LOCATION, body),
 			remote,
-			truncate(firstGroup(FALLBACK_RATE, body), 60),
 			truncate(firstGroup(FALLBACK_START, body), 40),
-			truncate(firstGroup(FALLBACK_DURATION, body), 40),
 			null,
 			null
 		);

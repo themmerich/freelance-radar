@@ -1,6 +1,8 @@
 package de.prime_ux.backend.offer;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 /** Angebot aus Sicht eines Profils: Score/Begründung/Skills stammen aus dessen Analyse. */
@@ -17,10 +19,18 @@ public record OfferResponse(
 	String location,
 	String country,
 	Remote remote,
-	String rate,
+	/** Rohtext der Startangabe aus der Mail — die einzige Quelle, wenn die Projektseite keine nennt. */
 	String startDate,
-	String duration,
 	String projectUrl,
+	// --- Von der Projekt-Detailseite ---
+	/** Rohwert des Budget-Badges; wie er zu lesen ist, sagt {@code budgetKind}. */
+	BigDecimal budgetEur,
+	BudgetKind budgetKind,
+	Integer durationMonths,
+	Integer utilizationPercent,
+	Integer remotePercent,
+	LocalDate startMonth,
+	boolean startImmediate,
 	Integer matchScore,
 	String matchReason,
 	String seniority,
@@ -46,10 +56,15 @@ public record OfferResponse(
 			offer.getLocation(),
 			offer.getCountry(),
 			offer.getRemote(),
-			offer.getRate(),
 			offer.getStartDate(),
-			offer.getDuration(),
 			offer.getProjectUrl(),
+			offer.getBudgetEur(),
+			offer.getBudgetKind(),
+			offer.getDurationMonths(),
+			offer.getUtilizationPercent(),
+			offer.getRemotePercent(),
+			offer.getStartMonth(),
+			offer.isStartImmediate(),
 			analysis == null ? null : analysis.getMatchScore(),
 			analysis == null ? null : analysis.getMatchReason(),
 			offer.getSeniority(),

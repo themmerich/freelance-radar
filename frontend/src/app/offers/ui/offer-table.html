@@ -1,12 +1,12 @@
 <ng-container *transloco="let t">
-  <!-- scrollable + tableStyleClass: die 12 Spalten passen nicht in den Container, deshalb horizontal scrollen. -->
+  <!-- scrollable + tableStyleClass: die 14 Spalten passen nicht in den Container, deshalb horizontal scrollen. -->
   <p-table
     [value]="offers()"
     [sortField]="'receivedAt'"
     [sortOrder]="-1"
     dataKey="id"
     [scrollable]="true"
-    tableStyleClass="min-w-[80rem]"
+    tableStyleClass="min-w-[88rem]"
     [paginator]="true"
     [rows]="rowsPerPage"
     [rowsPerPageOptions]="rowsPerPageOptions"
@@ -214,6 +214,14 @@
           </div>
         </th>
 
+        <th pSortableColumn="budgetEur" scope="col" class="whitespace-nowrap">
+          {{ t('offers.table.rate') }} <p-sort-icon field="budgetEur" />
+        </th>
+
+        <th pSortableColumn="durationMonths" scope="col" class="whitespace-nowrap">
+          {{ t('offers.table.duration') }} <p-sort-icon field="durationMonths" />
+        </th>
+
         <th scope="col">
           <div class="flex items-center gap-1">
             <span>{{ t('offers.table.status') }}</span>
@@ -295,12 +303,20 @@
         </td>
         <td>{{ offer.location ?? '—' }}</td>
         <td>{{ offer.remote ? t('offers.remote.' + offer.remote) : '—' }}</td>
+        <!-- Nur Stundensätze: ein Tagessatz stünde hier sonst als „649 €/h“. Tagessatz und
+             Gesamtbudget zeigt der Aufklapper mit ihrer Einordnung. -->
+        <td class="whitespace-nowrap">
+          {{ offer.budgetKind === 'HOURLY' && offer.budgetEur !== null ? t('offers.table.ratePerHour', { rate: offer.budgetEur }) : '—' }}
+        </td>
+        <td class="whitespace-nowrap">
+          {{ offer.durationMonths === null ? '—' : t('offers.table.durationMonths', { months: offer.durationMonths }) }}
+        </td>
         <td>{{ t('offers.status.' + offer.status) }}</td>
       </tr>
     </ng-template>
     <ng-template #expandedrow let-offer>
       <tr>
-        <td colspan="12">
+        <td colspan="14">
           <div class="flex flex-col gap-3 p-3">
             @if (offer.matchReason) {
               <p>{{ offer.matchReason }}</p>
@@ -323,22 +339,45 @@
                   <dd>{{ offer.role }}</dd>
                 </div>
               }
-              @if (offer.rate) {
+              <!-- Budget mit seiner Einordnung: „649 € pro Tag" statt einer Zahl, die als
+                   Stundensatz gelesen würde. -->
+              @if (offer.budgetEur !== null && offer.budgetKind) {
                 <div class="flex gap-1">
-                  <dt class="font-medium">{{ t('offers.detail.rate') }}:</dt>
-                  <dd>{{ offer.rate }}</dd>
+                  <dt class="font-medium">{{ t('offers.detail.budget') }}:</dt>
+                  <dd>{{ t('offers.budgetKind.' + offer.budgetKind, { amount: offer.budgetEur }) }}</dd>
                 </div>
               }
-              @if (offer.startDate) {
-                <div class="flex gap-1">
-                  <dt class="font-medium">{{ t('offers.detail.start') }}:</dt>
-                  <dd>{{ offer.startDate }}</dd>
-                </div>
-              }
-              @if (offer.duration) {
+              @if (offer.durationMonths !== null) {
                 <div class="flex gap-1">
                   <dt class="font-medium">{{ t('offers.detail.duration') }}:</dt>
-                  <dd>{{ offer.duration }}</dd>
+                  <dd>{{ t('offers.table.durationMonths', { months: offer.durationMonths }) }}</dd>
+                </div>
+              }
+              @if (offer.utilizationPercent !== null) {
+                <div class="flex gap-1">
+                  <dt class="font-medium">{{ t('offers.detail.utilization') }}:</dt>
+                  <dd>{{ offer.utilizationPercent }} %</dd>
+                </div>
+              }
+              @if (offer.remotePercent !== null) {
+                <div class="flex gap-1">
+                  <dt class="font-medium">{{ t('offers.detail.remoteShare') }}:</dt>
+                  <dd>{{ offer.remotePercent }} %</dd>
+                </div>
+              }
+              <!-- Die Projektseite ist genauer als der Mail-Rohtext, deckt aber nicht jedes Angebot ab. -->
+              @if (offer.startImmediate || offer.startMonth || offer.startDate) {
+                <div class="flex gap-1">
+                  <dt class="font-medium">{{ t('offers.detail.start') }}:</dt>
+                  <dd>
+                    @if (offer.startImmediate) {
+                      {{ t('offers.detail.startImmediate') }}
+                    } @else if (offer.startMonth) {
+                      {{ offer.startMonth | date: 'MM/yyyy' }}
+                    } @else {
+                      {{ offer.startDate }}
+                    }
+                  </dd>
                 </div>
               }
             </dl>
@@ -348,7 +387,7 @@
     </ng-template>
     <ng-template #emptymessage>
       <tr>
-        <td colspan="12">{{ t('offers.empty') }}</td>
+        <td colspan="14">{{ t('offers.empty') }}</td>
       </tr>
     </ng-template>
   </p-table>

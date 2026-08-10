@@ -66,7 +66,18 @@ type StatsOffer = {
   role: string | null;
   matchScore: number | null;
   skills: { name: string; gap: boolean }[];
+  /** Rohwert des Budget-Badges der Projektseite; nur mit `budgetKind` zu lesen. */
+  budgetEur: number | null;
+  budgetKind: BudgetKind | null;
+  durationMonths: number | null;
+  remotePercent: number | null;
 };
+
+/** Einordnung des Budget-Betrags; Stundensatz-Auswertungen zählen ausschließlich `HOURLY`. */
+export type BudgetKind = 'HOURLY' | 'DAILY' | 'TOTAL';
+
+/** Kennzahl samt der Fallzahl, auf der sie steht — ohne die wäre ein Ø über 31 Werte irreführend. */
+export type AverageWithCount = { average: number | null; count: number };
 
 /** Auswertungsfenster des Dashboards — der Umschalter über den Tabs setzt es. */
 export type TimeRange = '30d' | '90d' | '12m' | 'all';
@@ -233,6 +244,75 @@ export function averageScorePerBucket(offers: StatsOffer[], range: TimeRange, to
     labels: bucketLabels(start, count, bucket),
     averages: counts.map((value, i) => (value === 0 ? null : Math.round(sums[i] / value))),
   };
+}
+
+/**
+ * Klassengrenzen der drei Verteilungen. Die Randklassen sind bewusst offen, damit kein Wert
+ * lautlos herausfällt — `upTo: null` bedeutet „alles darüber".
+ */
+const DURATION_CLASSES = [
+  { label: '≤ 3', upTo: 3 },
+  { label: '4–6', upTo: 6 },
+  { label: '7–12', upTo: 12 },
+  { label: '> 12', upTo: null },
+] as const;
+
+const RATE_CLASSES = [
+  { label: '< 60', upTo: 59 },
+  { label: '60–79', upTo: 79 },
+  { label: '80–99', upTo: 99 },
+  { label: '100–119', upTo: 119 },
+  { label: '≥ 120', upTo: null },
+] as const;
+
+const REMOTE_CLASSES = [
+  { label: '0 %', upTo: 0 },
+  { label: '1–49 %', upTo: 49 },
+  { label: '50–99 %', upTo: 99 },
+  { label: '100 %', upTo: null },
+] as const;
+
+/** Stundensätze der Angebote — Tagessätze und Gesamtbudgets bleiben bewusst außen vor. */
+export function hourlyRates(offers: StatsOffer[]): number[] {
+  return offers.filter((offer) => offer.budgetKind === 'HOURLY' && offer.budgetEur !== null).map((offer) => offer.budgetEur ?? 0);
+}
+
+export function durations(offers: StatsOffer[]): number[] {
+  return offers.filter((offer) => offer.durationMonths !== null).map((offer) => offer.durationMonths ?? 0);
+}
+
+export function remotePercents(offers: StatsOffer[]): number[] {
+  return offers.filter((offer) => offer.remotePercent !== null).map((offer) => offer.remotePercent ?? 0);
+}
+
+/** Schnitt samt Fallzahl; ohne Werte `null` statt `0` — eine 0 wäre eine Aussage, die niemand getroffen hat. */
+export function averageWithCount(values: number[]): AverageWithCount {
+  if (values.length === 0) {
+    return { average: null, count: 0 };
+  }
+  const sum = values.reduce((total, value) => total + value, 0);
+  return { average: sum / values.length, count: values.length };
+}
+
+function classify(values: number[], classes: readonly { label: string; upTo: number | null }[]): NamedCount[] {
+  const counts = classes.map((entry) => ({ name: entry.label, count: 0 }));
+  for (const value of values) {
+    const index = classes.findIndex((entry) => entry.upTo === null || value <= entry.upTo);
+    counts[index].count += 1;
+  }
+  return counts;
+}
+
+export function durationBuckets(offers: StatsOffer[]): NamedCount[] {
+  return classify(durations(offers), DURATION_CLASSES);
+}
+
+export function rateBuckets(offers: StatsOffer[]): NamedCount[] {
+  return classify(hourlyRates(offers), RATE_CLASSES);
+}
+
+export function remotePercentBuckets(offers: StatsOffer[]): NamedCount[] {
+  return classify(remotePercents(offers), REMOTE_CLASSES);
 }
 
 /** Verteilung Remote/Hybrid/Vor Ort in fester Reihenfolge; letzter Eintrag = nicht erkannt. */

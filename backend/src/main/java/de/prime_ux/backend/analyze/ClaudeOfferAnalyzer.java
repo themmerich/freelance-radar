@@ -61,9 +61,7 @@ public class ClaudeOfferAnalyzer implements OfferAnalyzer {
 		String firma,
 		String ort,
 		String remote,
-		String rate,
 		String start,
-		String dauer,
 		String text
 	) {}
 
@@ -132,9 +130,7 @@ public class ClaudeOfferAnalyzer implements OfferAnalyzer {
 					offer.getCompany(),
 					offer.getLocation(),
 					offer.getRemote() == null ? null : offer.getRemote().name(),
-					offer.getRate(),
 					offer.getStartDate(),
-					offer.getDuration(),
 					truncate(promptText(offer))
 				)
 			)

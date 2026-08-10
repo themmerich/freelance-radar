@@ -10,11 +10,17 @@ import { ThemeStore } from '../../shared/data-access/theme-store';
 import {
   averageScorePerAgent,
   averageScorePerBucket,
+  averageWithCount,
   bucketFor,
-  countByRemote,
   countByRoleCategory,
+  durationBuckets,
+  durations,
+  hourlyRates,
   kpis,
   offersPerBucket,
+  rateBuckets,
+  remotePercentBuckets,
+  remotePercents,
   scoreHistogram,
   topSkills,
   triggersPerAgent,
@@ -23,13 +29,24 @@ import {
 import { KpiTiles } from '../ui/kpi-tiles';
 import { OfferCharts } from '../ui/offer-charts';
 import { AgentCharts } from '../ui/agent-charts';
+import { MarketStats } from '../ui/market-stats';
 import { RangePicker } from '../ui/range-picker';
 
 const TOP_SKILL_LIMIT = 10;
 
 @Component({
   selector: 'app-offers-page',
-  imports: [TranslocoDirective, CardModule, ProgressSpinnerModule, TabsModule, KpiTiles, OfferCharts, AgentCharts, RangePicker],
+  imports: [
+    TranslocoDirective,
+    CardModule,
+    ProgressSpinnerModule,
+    TabsModule,
+    KpiTiles,
+    OfferCharts,
+    AgentCharts,
+    RangePicker,
+    MarketStats,
+  ],
   template: `
     <main class="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <ng-container *transloco="let t">
@@ -57,10 +74,14 @@ const TOP_SKILL_LIMIT = 10;
                 </p-tablist>
                 <p-tabpanels>
                   <p-tabpanel value="global">
+                    <!-- Folgt dem Zeitraum, anders als die Kachel-Zeile — deshalb hier und nicht dort. -->
+                    <app-market-stats class="mb-4 block" [rate]="averageRate()" [duration]="averageDuration()" [remote]="averageRemote()" />
                     <app-offer-charts
                       [counts]="counts()"
                       [bucket]="bucket()"
-                      [remote]="remote()"
+                      [remoteShare]="remoteShare()"
+                      [durations]="durationClasses()"
+                      [rates]="rateClasses()"
                       [agents]="agents()"
                       [agentScores]="agentScores()"
                       [roles]="roles()"
@@ -128,7 +149,14 @@ export class OffersPage {
 
   protected readonly bucket = computed(() => bucketFor(this.settings.range()));
   protected readonly counts = computed(() => offersPerBucket(this.rangedOffers(), this.settings.range(), new Date()));
-  protected readonly remote = computed(() => countByRemote(this.rangedOffers()));
+  protected readonly remoteShare = computed(() => remotePercentBuckets(this.rangedOffers()));
+  protected readonly durationClasses = computed(() => durationBuckets(this.rangedOffers()));
+  protected readonly rateClasses = computed(() => rateBuckets(this.rangedOffers()));
+
+  /** Kennzahlen der Marktzeile — jede mit der Fallzahl, auf der sie steht. */
+  protected readonly averageRate = computed(() => averageWithCount(hourlyRates(this.rangedOffers())));
+  protected readonly averageDuration = computed(() => averageWithCount(durations(this.rangedOffers())));
+  protected readonly averageRemote = computed(() => averageWithCount(remotePercents(this.rangedOffers())));
   protected readonly agents = computed(() => triggersPerAgent(this.rangedOffers()));
   protected readonly agentScores = computed(() => averageScorePerAgent(this.rangedOffers()));
   protected readonly roles = computed(() => countByRoleCategory(this.rangedOffers()));
