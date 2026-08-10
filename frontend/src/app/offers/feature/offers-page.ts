@@ -9,27 +9,27 @@ import { SettingsStore } from '../data-access/settings-store';
 import { ThemeStore } from '../../shared/data-access/theme-store';
 import {
   averageScorePerAgent,
-  averageScorePerDay,
+  averageScorePerBucket,
+  bucketFor,
   countByRemote,
   countByRoleCategory,
   kpis,
-  offersPerDay,
-  offersPerMonth,
+  offersPerBucket,
   scoreHistogram,
   topSkills,
   triggersPerAgent,
+  withinRange,
 } from '../util/offer-stats';
 import { KpiTiles } from '../ui/kpi-tiles';
 import { OfferCharts } from '../ui/offer-charts';
 import { AgentCharts } from '../ui/agent-charts';
+import { RangePicker } from '../ui/range-picker';
 
 const TOP_SKILL_LIMIT = 10;
-/** Fenster des Monats-Charts — der Titel „(12 Monate)" in den Übersetzungen nennt dieselbe Zahl. */
-const MONTHS = 12;
 
 @Component({
   selector: 'app-offers-page',
-  imports: [TranslocoDirective, CardModule, ProgressSpinnerModule, TabsModule, KpiTiles, OfferCharts, AgentCharts],
+  imports: [TranslocoDirective, CardModule, ProgressSpinnerModule, TabsModule, KpiTiles, OfferCharts, AgentCharts, RangePicker],
   template: `
     <main class="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <ng-container *transloco="let t">
@@ -40,7 +40,13 @@ const MONTHS = 12;
             } @else if (store.hasError()) {
               <p class="text-red-500">{{ t('offers.loadError') }}</p>
             } @else {
+              <!-- Die Kacheln behalten bewusst feste Fenster: sie sind der Bezugspunkt,
+                   gegen den der gewählte Zeitraum der Charts gelesen wird. -->
               <app-kpi-tiles [kpis]="pageKpis()" />
+
+              <div class="flex justify-end">
+                <app-range-picker [range]="settings.range()" (rangeChange)="settings.setRange($event)" />
+              </div>
 
               <!-- Zwei Sichten auf dieselben Angebote: global über alle, dann je Suchagent.
                    Lazy, weil Chart.js im versteckten Panel auf 0×0 misst und danach nicht mehr nachwächst. -->
@@ -52,8 +58,8 @@ const MONTHS = 12;
                 <p-tabpanels>
                   <p-tabpanel value="global">
                     <app-offer-charts
-                      [perDay]="perDay()"
-                      [perMonth]="perMonth()"
+                      [counts]="counts()"
+                      [bucket]="bucket()"
                       [remote]="remote()"
                       [agents]="agents()"
                       [agentScores]="agentScores()"
@@ -84,8 +90,8 @@ const MONTHS = 12;
                         </label>
 
                         <app-agent-charts
-                          [perDay]="agentPerDay()"
-                          [perMonth]="agentPerMonth()"
+                          [counts]="agentCounts()"
+                          [bucket]="bucket()"
                           [scoreTrend]="agentScoreTrend()"
                           [histogram]="agentHistogram()"
                           [skills]="agentSkills()"
@@ -114,13 +120,18 @@ export class OffersPage {
   /** Kopien anderer Agenten: Auswertungen zählen immer nur primäre Einträge (wie v1). */
   private readonly primaryOffers = computed(() => this.store.offers().filter((offer) => offer.primary));
 
+  /** Die Kacheln tragen feste Fenster und hängen deshalb bewusst nicht am Zeitraum. */
   protected readonly pageKpis = computed(() => kpis(this.primaryOffers(), this.settings.settings().greenThreshold, new Date()));
-  protected readonly perDay = computed(() => offersPerDay(this.primaryOffers(), 30, new Date()));
-  protected readonly perMonth = computed(() => offersPerMonth(this.primaryOffers(), MONTHS, new Date()));
-  protected readonly remote = computed(() => countByRemote(this.primaryOffers()));
-  protected readonly agents = computed(() => triggersPerAgent(this.primaryOffers()));
-  protected readonly agentScores = computed(() => averageScorePerAgent(this.primaryOffers()));
-  protected readonly roles = computed(() => countByRoleCategory(this.primaryOffers()));
+
+  /** Einmal auf den gewählten Zeitraum geschnitten — jedes Chart rechnet aus dieser Liste. */
+  private readonly rangedOffers = computed(() => withinRange(this.primaryOffers(), this.settings.range(), new Date()));
+
+  protected readonly bucket = computed(() => bucketFor(this.settings.range()));
+  protected readonly counts = computed(() => offersPerBucket(this.rangedOffers(), this.settings.range(), new Date()));
+  protected readonly remote = computed(() => countByRemote(this.rangedOffers()));
+  protected readonly agents = computed(() => triggersPerAgent(this.rangedOffers()));
+  protected readonly agentScores = computed(() => averageScorePerAgent(this.rangedOffers()));
+  protected readonly roles = computed(() => countByRoleCategory(this.rangedOffers()));
 
   /** Agentennamen absteigend nach Angebotszahl — zugleich Dropdown-Optionen und Quelle der Vorauswahl. */
   protected readonly agentNames = computed(() => this.agents().map((agent) => agent.name));
@@ -133,12 +144,11 @@ export class OffersPage {
   });
 
   private readonly agentOffers = computed(() =>
-    this.primaryOffers().filter((offer) => offer.sourceType === 'AGENT' && offer.agentName === this.selectedAgent()),
+    this.rangedOffers().filter((offer) => offer.sourceType === 'AGENT' && offer.agentName === this.selectedAgent()),
   );
 
-  protected readonly agentPerDay = computed(() => offersPerDay(this.agentOffers(), 30, new Date()));
-  protected readonly agentPerMonth = computed(() => offersPerMonth(this.agentOffers(), MONTHS, new Date()));
-  protected readonly agentScoreTrend = computed(() => averageScorePerDay(this.agentOffers(), 30, new Date()));
+  protected readonly agentCounts = computed(() => offersPerBucket(this.agentOffers(), this.settings.range(), new Date()));
+  protected readonly agentScoreTrend = computed(() => averageScorePerBucket(this.agentOffers(), this.settings.range(), new Date()));
   protected readonly agentHistogram = computed(() => scoreHistogram(this.agentOffers()));
   protected readonly agentSkills = computed(() => topSkills(this.agentOffers(), TOP_SKILL_LIMIT, false));
   protected readonly agentGaps = computed(() => topSkills(this.agentOffers(), TOP_SKILL_LIMIT, true));

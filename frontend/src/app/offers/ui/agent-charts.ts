@@ -2,12 +2,20 @@ import { Component, computed, inject, input } from '@angular/core';
 import { TranslocoDirective, TranslocoService } from '@jsverse/transloco';
 import { ChartModule } from 'primeng/chart';
 
-import { axisOptions, axisOptionsWithLegend, PALETTE } from './chart-theme';
-import { DailyAverages, DailyCounts, MonthlyCounts, NamedCount, scoreTier } from '../util/offer-stats';
+import {
+  AVERAGE_KEY_PER_BUCKET,
+  axisOptions,
+  axisOptionsWithLegend,
+  PALETTE,
+  SCORE_TREND_KEY_PER_BUCKET,
+  TITLE_KEY_PER_BUCKET,
+} from './chart-theme';
+import { Bucket, BucketedAverages, BucketedCounts, NamedCount, scoreTier } from '../util/offer-stats';
 
 /**
- * Die 6 Auswertungs-Charts der Agenten-Analyse — alle Daten sind bereits auf den
- * gewählten Suchagenten gefiltert. Das Histogramm nutzt die Status-Farben der Score-Ampel.
+ * Die 5 Auswertungs-Charts der Agenten-Analyse — alle Daten sind bereits auf den gewählten
+ * Suchagenten und den gewählten Zeitraum gefiltert. Das Histogramm nutzt die Status-Farben
+ * der Score-Ampel; die beiden Zeitreihen tragen ihre Auflösung im Titel.
  */
 @Component({
   selector: 'app-agent-charts',
@@ -16,15 +24,11 @@ import { DailyAverages, DailyCounts, MonthlyCounts, NamedCount, scoreTier } from
     <ng-container *transloco="let t">
       <div class="grid gap-4 md:grid-cols-2">
         <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
-          <figcaption class="text-sm font-medium">{{ t('offers.charts.perDay') }}</figcaption>
-          <p-chart type="bar" [data]="perDayData()" [options]="barOptions()" height="16rem" />
+          <figcaption class="text-sm font-medium">{{ t(countsTitleKey()) }}</figcaption>
+          <p-chart type="bar" [data]="countsData()" [options]="countsOptions()" height="16rem" />
         </figure>
         <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
-          <figcaption class="text-sm font-medium">{{ t('offers.charts.perMonth') }}</figcaption>
-          <p-chart type="bar" [data]="perMonthData()" [options]="perMonthOptions()" height="16rem" />
-        </figure>
-        <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
-          <figcaption class="text-sm font-medium">{{ t('offers.charts.scoreTrend') }}</figcaption>
+          <figcaption class="text-sm font-medium">{{ t(scoreTrendTitleKey()) }}</figcaption>
           <p-chart type="line" [data]="scoreTrendData()" [options]="scoreTrendOptions()" height="16rem" />
         </figure>
         <figure class="flex flex-col gap-2 rounded border border-surface-200 p-3 dark:border-surface-700">
@@ -44,9 +48,10 @@ import { DailyAverages, DailyCounts, MonthlyCounts, NamedCount, scoreTier } from
   `,
 })
 export class AgentCharts {
-  readonly perDay = input.required<DailyCounts>();
-  readonly perMonth = input.required<MonthlyCounts>();
-  readonly scoreTrend = input.required<DailyAverages>();
+  readonly counts = input.required<BucketedCounts>();
+  /** Auflösung beider Zeitreihen — bestimmt Titel und Legende, die Daten kommen fertig gebucketet. */
+  readonly bucket = input.required<Bucket>();
+  readonly scoreTrend = input.required<BucketedAverages>();
   readonly skills = input.required<NamedCount[]>();
   readonly gaps = input.required<NamedCount[]>();
   readonly histogram = input.required<number[]>();
@@ -59,29 +64,27 @@ export class AgentCharts {
 
   private readonly palette = computed(() => (this.dark() ? PALETTE.dark : PALETTE.light));
 
-  protected readonly perDayData = computed(() => ({
-    labels: this.perDay().labels,
-    datasets: [{ data: this.perDay().counts, backgroundColor: this.palette().series1, borderRadius: 4 }],
-  }));
+  protected readonly countsTitleKey = computed(() => TITLE_KEY_PER_BUCKET[this.bucket()]);
+  protected readonly scoreTrendTitleKey = computed(() => SCORE_TREND_KEY_PER_BUCKET[this.bucket()]);
 
-  // Balken je Monat plus gestrichelte Linie auf dem Monatsschnitt — die Legende benennt beide.
-  protected readonly perMonthData = computed(() => {
+  // Balken je Bucket plus gestrichelte Linie auf dem Schnitt — die Legende benennt beide.
+  protected readonly countsData = computed(() => {
     const palette = this.palette();
-    const perMonth = this.perMonth();
+    const counts = this.counts();
     return {
-      labels: perMonth.labels,
+      labels: counts.labels,
       datasets: [
         {
           type: 'bar' as const,
-          label: this.transloco.translate('offers.charts.perMonthOffers'),
-          data: perMonth.counts,
+          label: this.transloco.translate('offers.charts.offersLegend'),
+          data: counts.counts,
           backgroundColor: palette.series1,
           borderRadius: 4,
         },
         {
           type: 'line' as const,
-          label: this.transloco.translate('offers.charts.perMonthAverage'),
-          data: perMonth.counts.map(() => perMonth.average),
+          label: this.transloco.translate(AVERAGE_KEY_PER_BUCKET[this.bucket()]),
+          data: counts.counts.map(() => counts.average),
           borderColor: palette.series2,
           borderDash: [6, 4],
           pointRadius: 0,
@@ -101,7 +104,7 @@ export class AgentCharts {
           backgroundColor: palette.series1,
           pointRadius: 3,
           tension: 0.3,
-          // Tage ohne analysierte Angebote sind null — die Linie überbrückt sie statt abzureißen.
+          // Buckets ohne analysierte Angebote sind null — die Linie überbrückt sie statt abzureißen.
           spanGaps: true,
         },
       ],
@@ -130,7 +133,7 @@ export class AgentCharts {
 
   protected readonly barOptions = computed(() => axisOptions(this.palette(), 'x'));
   protected readonly horizontalBarOptions = computed(() => axisOptions(this.palette(), 'y'));
-  protected readonly perMonthOptions = computed(() => axisOptionsWithLegend(this.palette(), 'x'));
+  protected readonly countsOptions = computed(() => axisOptionsWithLegend(this.palette(), 'x'));
   // Der Score-Trend bekommt eine feste 0–100-Werteachse, damit die Linie nicht relativ überzeichnet.
   protected readonly scoreTrendOptions = computed(() => axisOptions(this.palette(), 'x', 100));
 }

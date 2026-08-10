@@ -9,11 +9,13 @@ import { AgentCharts } from './agent-charts';
 const en = {
   offers: {
     charts: {
-      perDay: 'Offers per day (30 days)',
-      perMonth: 'Requests per month (12 months)',
-      perMonthOffers: 'Requests',
-      perMonthAverage: 'Avg per month',
-      scoreTrend: 'Avg match score per day (30 days)',
+      perDay: 'Offers per day',
+      perWeek: 'Offers per week',
+      offersLegend: 'Offers',
+      averagePerDay: 'Avg per day',
+      averagePerWeek: 'Avg per week',
+      scoreTrendDay: 'Avg match score per day',
+      scoreTrendWeek: 'Avg match score per week',
       scores: 'Match score distribution',
       topSkills: 'Top requested skills',
       topGaps: 'Top skill gaps',
@@ -46,10 +48,10 @@ describe('AgentCharts', () => {
     }).compileComponents();
   });
 
-  function createFixture() {
+  function createFixture(bucket: 'day' | 'week' = 'day') {
     const fixture = TestBed.createComponent(AgentCharts);
-    fixture.componentRef.setInput('perDay', { labels: ['01.07.'], counts: [1] });
-    fixture.componentRef.setInput('perMonth', { labels: ['07.26'], counts: [1], average: 0.1 });
+    fixture.componentRef.setInput('counts', { labels: ['01.07.'], counts: [1], average: 0.1 });
+    fixture.componentRef.setInput('bucket', bucket);
     fixture.componentRef.setInput('scoreTrend', { labels: ['01.07.'], averages: [80] });
     fixture.componentRef.setInput('histogram', [0, 0, 0, 0, 0, 0, 0, 0, 1, 0]);
     fixture.componentRef.setInput('skills', [{ name: 'Angular', count: 2 }]);
@@ -61,34 +63,40 @@ describe('AgentCharts', () => {
     return fixture;
   }
 
-  it('renders the six agent charts with their titles', () => {
+  it('renders the five agent charts with their titles', () => {
     const fixture = createFixture();
 
     const captions = [...(fixture.nativeElement as HTMLElement).querySelectorAll('figcaption')].map((c) => c.textContent?.trim());
     expect(captions).toEqual([
-      'Offers per day (30 days)',
-      'Requests per month (12 months)',
-      'Avg match score per day (30 days)',
+      'Offers per day',
+      'Avg match score per day',
       'Match score distribution',
       'Top requested skills',
       'Top skill gaps',
     ]);
   });
 
+  it('names both time series after the resolution it was given', () => {
+    const fixture = createFixture('week');
+
+    const captions = [...(fixture.nativeElement as HTMLElement).querySelectorAll('figcaption')].map((c) => c.textContent?.trim());
+    expect(captions.slice(0, 2)).toEqual(['Offers per week', 'Avg match score per week']);
+  });
+
   it('passes skills and gaps as labels of the bar charts', () => {
     const fixture = createFixture();
 
-    // Reihenfolge wie im Template: pro Tag, pro Monat, Trend, Verteilung, Skills, Gaps.
+    // Reihenfolge wie im Template: Zeitreihe, Score-Trend, Verteilung, Skills, Gaps.
     const charts = fixture.debugElement.queryAll(By.directive(ChartStub)).map((chart) => chart.componentInstance as ChartStub);
-    expect(charts).toHaveLength(6);
-    expect(charts[4].data()?.labels).toEqual(['Angular']);
-    expect(charts[5].data()?.labels).toEqual(['Kotlin']);
+    expect(charts).toHaveLength(5);
+    expect(charts[3].data()?.labels).toEqual(['Angular']);
+    expect(charts[4].data()?.labels).toEqual(['Kotlin']);
   });
 
-  it('draws the monthly average as a flat line next to the monthly counts', () => {
+  it('draws the average as a flat line next to the counts', () => {
     const fixture = createFixture();
 
-    const perMonth = fixture.debugElement.queryAll(By.directive(ChartStub))[1].componentInstance as ChartStub;
-    expect(perMonth.data()?.datasets.map((dataset) => dataset.data)).toEqual([[1], [0.1]]);
+    const counts = fixture.debugElement.queryAll(By.directive(ChartStub))[0].componentInstance as ChartStub;
+    expect(counts.data()?.datasets.map((dataset) => dataset.data)).toEqual([[1], [0.1]]);
   });
 });

@@ -1,3 +1,26 @@
+import { Bucket } from '../util/offer-stats';
+
+/** Titel der Angebots-Zeitreihe je Auflösung — das Fenster nennt der Umschalter, nicht der Titel. */
+export const TITLE_KEY_PER_BUCKET: Record<Bucket, string> = {
+  day: 'offers.charts.perDay',
+  week: 'offers.charts.perWeek',
+  month: 'offers.charts.perMonth',
+};
+
+/** Legende der Durchschnittslinie je Auflösung. */
+export const AVERAGE_KEY_PER_BUCKET: Record<Bucket, string> = {
+  day: 'offers.charts.averagePerDay',
+  week: 'offers.charts.averagePerWeek',
+  month: 'offers.charts.averagePerMonth',
+};
+
+/** Titel der Score-Zeitreihe je Auflösung. */
+export const SCORE_TREND_KEY_PER_BUCKET: Record<Bucket, string> = {
+  day: 'offers.charts.scoreTrendDay',
+  week: 'offers.charts.scoreTrendWeek',
+  month: 'offers.charts.scoreTrendMonth',
+};
+
 /**
  * Farben und Achsen-Optionen, die sich die Chart-Komponenten des Dashboards teilen.
  * Farben aus einer validierten Dataviz-Palette, jeweils für helle und dunkle
