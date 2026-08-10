@@ -27,11 +27,16 @@ Gemessen am Bestand vom 2026-08-09 (428 primäre Angebote seit 2026-07-20):
    Analyse bleibt manuell. Ohne lückenlose Sammlung ist keine Zeitreihe über Monate
    belastbar; „heute/7 Tage"-KPIs stimmen nur nach frischem Abruf.
 
-2. **Rate und Laufzeit über die Analyse extrahieren statt per Regex**
-   `OfferAssessment` um `rate` (normalisiert €/h), `duration` (Monate) und ein
-   bereinigtes `startMonth` erweitern — das LLM liest den Body ohnehin, Mehrkosten
-   sind ein paar Output-Tokens pro Angebot. Schaltet die Raten-Statistik frei
-   (Ø Stundensatz pro Monat, Satz je Skill/Rolle/Seniorität).
+2. ~~**Rate und Laufzeit über die Analyse extrahieren statt per Regex**~~ — **erledigt am
+   2026-08-10, aber anders als hier vermutet.** Die Annahme, die Regex greife nicht, war
+   falsch: Rate und Laufzeit stehen überhaupt nicht in den Mails (0 von 428 nennen eine
+   Laufzeit). Beide stehen auf der verlinkten, öffentlich erreichbaren Projektseite, die
+   jetzt beim Collect-Lauf mit abgerufen wird — deterministisch geparst, ohne Tokens. Die
+   Beschreibung von dort geht zusätzlich in die Analyse, weil die Teaser-Mail für Skills und
+   Branche zu dünn ist. Entwurf:
+   [`2026-08-10-projekt-detailseiten-design.md`](superpowers/specs/2026-08-10-projekt-detailseiten-design.md).
+   **Abdeckung laut Stichprobe:** Laufzeit praktisch immer, Stundensatz nur bei rund einem
+   Viertel der Projekte — die echte Quote zeigt sich nach dem Nachlauf über den Bestand.
 
 3. **`industry` schärfen oder streichen**
    Entweder Prompt mit fester Kategorienliste (analog zur Berufsprofil-Clusterung)

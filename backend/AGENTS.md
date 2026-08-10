@@ -41,6 +41,9 @@ Use the Gradle wrapper (`./gradlew`); do not rely on a globally installed Gradle
   container via Testcontainers and `@ServiceConnection` — only Docker is required.
 - **Tests never touch a real mailbox.** `CollectService` depends on the `MailSource`
   interface; tests stub it (`@Primary`-Bean) statt `ImapService`.
+- **Tests never call freelancermap.** Der Abruf der Projekt-Detailseiten hängt an der
+  `PageSource`-Schnittstelle; Tests stubben sie statt `HttpPageSource` und setzen
+  `radar.detail.delay-ms=0`, damit die Drosselung sie nicht ausbremst.
 - **Tests never call the Claude API.** `AnalysisService` depends on the `OfferAnalyzer`
   interface; tests stub it statt `ClaudeOfferAnalyzer` und setzen einen Dummy-Key
   (`spring.ai.anthropic.api-key=test-key`), damit die Autokonfiguration startet.
