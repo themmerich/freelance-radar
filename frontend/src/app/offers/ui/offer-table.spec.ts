@@ -21,6 +21,10 @@ const en = {
       country: 'Country',
       location: 'Location',
       remote: 'Remote',
+      rate: 'Rate',
+      ratePerHour: '{{rate}} €/h',
+      duration: 'Duration',
+      durationMonths: '{{months}} mo.',
       status: 'Status',
       pageReport: '{first}–{last} of {totalRecords}',
       filterAll: 'All',
@@ -30,10 +34,14 @@ const en = {
       notAnalyzed: 'Not analyzed yet.',
       skills: 'Skills (red = missing from profile)',
       role: 'Role per analysis',
-      rate: 'Rate',
+      budget: 'Budget',
       start: 'Start',
+      startImmediate: 'immediately',
       duration: 'Duration',
+      utilization: 'Utilisation',
+      remoteShare: 'Remote share',
     },
+    budgetKind: { HOURLY: '{{amount}} € per hour', DAILY: '{{amount}} € per day', TOTAL: '{{amount}} € total' },
     source: { AGENT: 'Agent', PRIVATE: 'Private', NEWSLETTER: 'Newsletter', OTHER: 'Other' },
     remote: { REMOTE: 'Remote', HYBRID: 'Hybrid', ONSITE: 'On-site' },
     roleCategory: { FRONTEND: 'Frontend', FULLSTACK: 'Fullstack', OTHER: 'Other' },
@@ -57,9 +65,14 @@ const ROW: OfferRow = {
   projectUrl: 'https://www.freelancermap.de/nproj/3026991.html',
   matchScore: 85,
   matchReason: 'Kern-Stack Angular, remote — passt sehr gut zum Profil.',
-  rate: '95,00 €/h',
   startDate: '09/2026',
-  duration: '6 Monate',
+  budgetEur: 95,
+  budgetKind: 'HOURLY',
+  durationMonths: 6,
+  utilizationPercent: 100,
+  remotePercent: 80,
+  startMonth: null,
+  startImmediate: false,
   skills: [
     { name: 'Angular', gap: false },
     { name: 'Kotlin', gap: true },
@@ -116,7 +129,28 @@ describe('OfferTable', () => {
     const text = element.textContent ?? '';
     expect(text).toContain('Kern-Stack Angular, remote — passt sehr gut zum Profil.');
     expect(text).toContain('Kotlin');
-    expect(text).toContain('95,00 €/h');
+    expect(text).toContain('95 € per hour');
+  });
+
+  it('shows an hourly rate in the rate column', () => {
+    const fixture = TestBed.createComponent(OfferTable);
+    fixture.componentRef.setInput('offers', [ROW]);
+    fixture.detectChanges();
+
+    const cells = [...(fixture.nativeElement as HTMLElement).querySelectorAll('tbody td')].map((cell) => cell.textContent?.trim());
+    expect(cells).toContain('95 €/h');
+    expect(cells).toContain('6 mo.');
+  });
+
+  it('leaves the rate column empty for a day rate rather than passing it off as hourly', () => {
+    const fixture = TestBed.createComponent(OfferTable);
+    // 649 € ist ein Tagessatz — in der Satz-Spalte stünde sonst „649 €/h".
+    fixture.componentRef.setInput('offers', [{ ...ROW, budgetEur: 649, budgetKind: 'DAILY' }]);
+    fixture.detectChanges();
+
+    const cells = [...(fixture.nativeElement as HTMLElement).querySelectorAll('tbody td')].map((cell) => cell.textContent?.trim());
+    expect(cells).not.toContain('649 €/h');
+    expect(cells).toContain('—');
   });
 
   it('shows the duplicate badge when several agents caught the same project', () => {
@@ -156,7 +190,7 @@ describe('OfferTable', () => {
     fixture.detectChanges();
 
     const element = fixture.nativeElement as HTMLElement;
-    expect(element.querySelector('table')?.className).toContain('min-w-[80rem]');
+    expect(element.querySelector('table')?.className).toContain('min-w-[88rem]');
   });
 
   it('filters rows by column value', () => {

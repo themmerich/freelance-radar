@@ -4,6 +4,13 @@ export type SourceType = 'AGENT' | 'PRIVATE' | 'NEWSLETTER' | 'OTHER';
 /** Remote-Anteil des Angebots, sofern aus der Mail erkennbar. */
 export type Remote = 'REMOTE' | 'HYBRID' | 'ONSITE';
 
+/**
+ * Wie die Budget-Angabe eines Projekts zu lesen ist. Die Projektseite beziffert das Budget
+ * ohne Einheit; unterschieden wird an der Größenordnung, deshalb zählen Auswertungen über
+ * Stundensätze ausschließlich `HOURLY`.
+ */
+export type BudgetKind = 'HOURLY' | 'DAILY' | 'TOTAL';
+
 /** Verarbeitungsstatus: NEW wartet auf die Claude-Analyse. */
 export type OfferStatus = 'NEW' | 'ANALYZED' | 'ERROR';
 
@@ -28,10 +35,17 @@ export type Offer = {
   /** ISO-3166-Code des Einsatzlandes (DE/AT/CH, ...), von der Analyse abgeleitet. */
   country: string | null;
   remote: Remote | null;
-  rate: string | null;
+  /** Rohtext der Startangabe aus der Mail — einzige Quelle, wenn die Projektseite keine nennt. */
   startDate: string | null;
-  duration: string | null;
   projectUrl: string | null;
+  /** Rohwert des Budget-Badges der Projektseite; wie er zu lesen ist, sagt `budgetKind`. */
+  budgetEur: number | null;
+  budgetKind: BudgetKind | null;
+  durationMonths: number | null;
+  utilizationPercent: number | null;
+  remotePercent: number | null;
+  startMonth: string | null;
+  startImmediate: boolean;
   matchScore: number | null;
   matchReason: string | null;
   seniority: string | null;

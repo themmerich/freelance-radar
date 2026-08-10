@@ -28,9 +28,16 @@ export type OfferRow = {
   projectUrl: string | null;
   matchScore: number | null;
   matchReason: string | null;
-  rate: string | null;
+  /** Rohtext der Startangabe aus der Mail — Rückfall, wenn die Projektseite keine nennt. */
   startDate: string | null;
-  duration: string | null;
+  /** Rohwert des Budget-Badges; die Satz-Spalte zeigt ihn nur bei `budgetKind === 'HOURLY'`. */
+  budgetEur: number | null;
+  budgetKind: 'HOURLY' | 'DAILY' | 'TOTAL' | null;
+  durationMonths: number | null;
+  utilizationPercent: number | null;
+  remotePercent: number | null;
+  startMonth: string | null;
+  startImmediate: boolean;
   skills: { name: string; gap: boolean }[];
   status: 'NEW' | 'ANALYZED' | 'ERROR';
 };
