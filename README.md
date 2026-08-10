@@ -236,6 +236,8 @@ e2e-Tests dort gegen den Produktions-Build, damit produktionsspezifische Fehler 
 
 ## Roadmap
 
+Details und weitere Kandidaten im [Verbesserungs-Backlog](docs/improvement-backlog.md).
+
 - [x] Gerüst & Datenfluss ohne LLM (IMAP, Parser, Dedup, Minimal-Dashboard)
 - [x] Analyse mit Kostendeckel (Spring AI + Claude Haiku, Batch-Prompt)
 - [x] Auswertungen: KPI-Kacheln und Charts
