@@ -51,6 +51,21 @@ const LOCATIONS = ['Hamburg', 'München', 'Berlin', 'Frankfurt', 'Wien', 'Züric
 const REMOTE = ['REMOTE', 'HYBRID', 'ONSITE'];
 const COUNTRIES = ['DE', 'DE', 'DE', 'AT', 'CH'];
 
+/**
+ * Budget wie auf den echten Projektseiten: meistens fehlt es, sonst ist es überwiegend ein
+ * Stundensatz und gelegentlich ein Tagessatz. Der Tagessatz gehört dazu — er zeigt, dass die
+ * Satz-Spalte ihn korrekt aussortiert.
+ */
+function budget(random) {
+  const roll = random();
+  if (roll > 0.12) {
+    return { budgetEur: null, budgetKind: null };
+  }
+  return roll > 0.03
+    ? { budgetEur: 60 + Math.floor(random() * 60), budgetKind: 'HOURLY' }
+    : { budgetEur: 550 + Math.floor(random() * 150), budgetKind: 'DAILY' };
+}
+
 /** Deterministischer PRNG — gleiche Eingabe, gleiche Bilder. */
 function mulberry32(seed) {
   return () => {
@@ -94,9 +109,15 @@ function buildOffers() {
       location: pick(LOCATIONS),
       country: pick(COUNTRIES),
       remote: pick(REMOTE),
-      rate: random() > 0.8 ? `${85 + Math.floor(random() * 30)},00 €/h` : null,
       startDate: '09/2026',
-      duration: random() > 0.5 ? '6 Monate' : null,
+      // Wie in echten Daten: die Laufzeit steht fast immer auf der Projektseite, ein Budget
+      // nur bei jedem zehnten — und wenn, dann mal als Stunden-, mal als Tagessatz.
+      ...budget(random),
+      durationMonths: random() > 0.15 ? 3 + Math.floor(random() * 10) : null,
+      utilizationPercent: random() > 0.3 ? 100 : 80,
+      remotePercent: pick([100, 100, 100, 80, 60, 20, 0]),
+      startMonth: null,
+      startImmediate: random() > 0.5,
       projectUrl: `https://www.freelancermap.de/nproj/30269${i}.html`,
       matchScore,
       matchReason:

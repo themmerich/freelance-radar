@@ -15,7 +15,7 @@ Ausgelöst per Knopfdruck — Tokens fließen nur, wenn ein Lauf bewusst gestart
 ![Java](https://img.shields.io/badge/Java-25-orange.svg)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791.svg)
 
-<img src="docs/screenshots/dashboard.png" alt="Dashboard mit KPI-Kacheln und den sechs Charts der Gesamtauswertung" width="900">
+<img src="docs/screenshots/dashboard.png" alt="Dashboard mit KPI-Kacheln, Marktkennzahlen und den sieben Charts der Gesamtauswertung" width="900">
 
 </div>
 
@@ -37,7 +37,8 @@ Die Analyse läuft über die Claude API und kostet Geld. Deshalb ist Sparsamkeit
 Designprinzip und kein Nachgedanke: ein Batch-Request statt einer Anfrage pro Angebot,
 nur unbewertete Angebote, gekürzte Mail-Bodies, ein Kostendeckel pro Lauf — und jede
 teure Aktion zeigt ihre geschätzten Kosten _vorher_ an. Ein voller Lauf über 25 Angebote
-liegt bei rund **4 Cent**.
+liegt bei wenigen Cent — gemessen rund **1.200 Input-Tokens je Angebot**, seit die
+Projektbeschreibung statt der Teaser-Mail bewertet wird (davor waren es ~750).
 
 ## Features
 
@@ -48,12 +49,19 @@ liegt bei rund **4 Cent**.
   Tokens und zählt in Auswertungen, die Kopien erscheinen als Badge „spread 3×".
 - **Bewertung gegen mehrere Profile** — Ergebnisse liegen pro Profil nebeneinander, der
   Umschalter in der Topbar wechselt die komplette Sicht (Tabelle, KPIs, Charts).
+- **Wählbarer Zeitraum** — ein Umschalter (30 Tage / 90 Tage / 12 Monate / alles) über den
+  Tabs schneidet **alle** Auswertungen zu; die Zeitreihen ziehen ihre Auflösung mit
+  (Tage → Wochen → Monate). Die Auswahl überlebt den Reload.
 - **Dashboard in zwei Tabs** — die KPI-Zeile (heute, 7 Tage, 30 Tage, gesamt, Ø Match-Score,
-  🟢-Anteil) steht über beiden. _Gesamtauswertung_ zeigt die Marktsicht: Angebote pro Tag,
-  Anfragen pro Monat über 12 Monate mit Durchschnittslinie, Trigger und Ø Score je
-  Suchagent, Remote-Anteil, angefragte Berufsprofile. _Agenten-Analyse_ zeigt dieselben
-  Zeitreihen plus Score-Trend, Score-Histogramm mit Ampelfarben, Top-Skills und
-  Top-Skill-Gaps — alles gefiltert auf einen wählbaren Suchagenten.
+  🟢-Anteil) steht mit festen Fenstern über beiden. _Gesamtauswertung_ zeigt die Marktsicht:
+  Marktkennzahlen (Ø Stundensatz, Ø Laufzeit, Ø Remote-Anteil) und sieben Charts — Volumen
+  mit Durchschnittslinie, Trigger und Ø Score je Suchagent, Remote-Anteil, Laufzeit- und
+  Stundensatz-Verteilung, angefragte Berufsprofile. _Agenten-Analyse_ zeigt Volumen und
+  Score-Trend plus Score-Histogramm mit Ampelfarben, Top-Skills und Top-Skill-Gaps — alles
+  gefiltert auf einen wählbaren Suchagenten.
+- **Kennzahlen nennen ihre Fallzahl** — „Ø 83 €/h aus 31 Angeboten". Nur rund jedes zehnte
+  Projekt beziffert überhaupt ein Budget; ein nackter Durchschnitt würde eine Marktaussage
+  vortäuschen, die die Datenlage nicht hergibt.
 - **Geclusterte Berufsprofile** — die Analyse liefert Rollen als Freitext, was in der Praxis
   auf ~145 Schreibweisen für 173 Angebote hinausläuft („Full-Stack Software Engineer",
   „Java-Fullstack-Entwickler", …). Schlüsselwort-Regeln fassen sie zu Clustern wie Fullstack,
@@ -69,7 +77,7 @@ liegt bei rund **4 Cent**.
 <table>
 <tr>
 <td colspan="2">
-<img src="docs/screenshots/dashboard-agents.png" alt="Dashboard, Tab Agenten-Analyse mit sechs auf einen Suchagenten gefilterten Charts">
+<img src="docs/screenshots/dashboard-agents.png" alt="Dashboard, Tab Agenten-Analyse mit fünf auf einen Suchagenten gefilterten Charts">
 <p align="center"><em>Agenten-Analyse — dieselben Auswertungen, gefiltert auf einen wählbaren Suchagenten</em></p>
 </td>
 </tr>
@@ -123,6 +131,9 @@ und ohne echte Angebotsdaten.
 │                   Startdatum-Merker                         │
 │  ParserService    Betreff/Body → Projektfelder, Agent-Name  │
 │  CollectService   Message-ID-Dedup + Cross-Agent-Gruppen    │
+│  ProjectPageService  holt die verlinkte Projektseite:       │
+│                   Stundensatz, Laufzeit, Auslastung,        │
+│                   Remote-Anteil, Beschreibung (gedrosselt)  │
 │  AnalysisService  Spring AI 2.0 → claude-haiku-4-5,         │
 │                   Batch-Prompt, Kostendeckel, Token-Log     │
 └───────────────────────────┬─────────────────────────────────┘

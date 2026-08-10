@@ -15,11 +15,11 @@ const OFFER = {
   country: 'AT',
   remote: 'REMOTE',
   startDate: '09/2026',
-  budgetEur: null,
-  budgetKind: null,
-  durationMonths: null,
-  utilizationPercent: null,
-  remotePercent: null,
+  budgetEur: 85,
+  budgetKind: 'HOURLY',
+  durationMonths: 6,
+  utilizationPercent: 100,
+  remotePercent: 80,
   startMonth: null,
   startImmediate: false,
   projectUrl: 'https://www.freelancermap.de/nproj/3026991.html',
@@ -119,7 +119,7 @@ test.describe('Offers dashboard e2e', () => {
     await expect(page.getByText('1 new offers imported from 1 mails · 1 analyzed · 2 detail pages fetched')).toBeVisible();
   });
 
-  test('shows the kpi tiles and splits the ten charts across both tabs', async ({ page }) => {
+  test('shows the kpi tiles and splits the twelve charts across both tabs', async ({ page }) => {
     await page.getByRole('button', { name: 'Fetch & analyze mails' }).click();
 
     // exact — „Avg match score per day/agent" sind seither auch Chart-Titel.
@@ -129,8 +129,12 @@ test.describe('Offers dashboard e2e', () => {
     // Gesamt zählt ohne Zeitfenster; die Kopie des zweiten Agenten bleibt außen vor.
     await expect(page.locator('dl > div').filter({ hasText: 'Total' })).toContainText('1');
 
-    // Die KPI-Kacheln stehen über beiden Tabs; die 5 globalen Charts liegen im Auftakt-Tab.
-    await expect(page.getByRole('tabpanel').locator('canvas')).toHaveCount(5);
+    // Die KPI-Kacheln stehen über beiden Tabs; die 7 globalen Charts liegen im Auftakt-Tab.
+    await expect(page.getByRole('tabpanel').locator('canvas')).toHaveCount(7);
+    // Die Marktkennzahlen nennen ihre Fallzahl — hier das eine analysierte Angebot.
+    const rateStat = page.locator('app-market-stats div').filter({ hasText: 'Avg hourly rate' });
+    await expect(rateStat).toContainText('85 €/h');
+    await expect(rateStat).toContainText('from 1 offers');
 
     await page.getByRole('tab', { name: 'Agent analysis' }).click();
 
