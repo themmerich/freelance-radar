@@ -12,6 +12,8 @@ const RUN: Run = {
   newOffers: 1,
   totalSeen: 1,
   analyzedOffers: 1,
+  detailsFetched: 0,
+  detailsFailed: 0,
   inputTokens: 12000,
   outputTokens: 800,
   note: 'since=2026-07-22',

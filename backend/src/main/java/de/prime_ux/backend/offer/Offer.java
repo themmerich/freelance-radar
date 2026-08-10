@@ -109,8 +109,13 @@ public class Offer {
 
 	// --- Von der Projekt-Detailseite (die Mail selbst führt diese Felder nicht) ---
 
-	@Column(name = "rate_hourly_eur", precision = 8, scale = 2)
-	private BigDecimal rateHourlyEur;
+	/** Rohwert des Budget-Badges — je nach {@link #budgetKind} Stunden-, Tagessatz oder Gesamtsumme. */
+	@Column(name = "budget_eur", precision = 12, scale = 2)
+	private BigDecimal budgetEur;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "budget_kind", columnDefinition = "text")
+	private BudgetKind budgetKind;
 
 	@Column(name = "duration_months")
 	private Integer durationMonths;

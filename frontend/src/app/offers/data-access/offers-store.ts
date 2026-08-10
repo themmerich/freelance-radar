@@ -76,6 +76,7 @@ export class OffersStore {
               newOffers: run.newOffers,
               totalSeen: run.totalSeen,
               analyzed: run.analyzedOffers,
+              details: run.detailsFetched,
             }),
           });
         },

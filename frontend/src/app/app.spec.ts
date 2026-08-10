@@ -22,7 +22,7 @@ const en = {
     profile: 'Profile',
     collect: 'Fetch & analyze mails',
     messagesTitle: 'Messages',
-    lastRun: 'Last run: {{newOffers}} new of {{totalSeen}} seen',
+    lastRun: 'Last run: {{newOffers}} new of {{totalSeen}} seen, {{details}} detail pages',
     noRunYet: 'No run yet — fetch mails now.',
   },
 };

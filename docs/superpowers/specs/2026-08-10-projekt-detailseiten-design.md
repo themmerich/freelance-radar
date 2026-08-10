@@ -45,8 +45,28 @@ und die Skills praktisch nur aus dem Projekttitel stammen.
 | Auslöser                       | Im Collect-Lauf, direkt nach dem Parsen                                 |
 | Beschreibung in der Analyse    | Ja, und der Bestand wird einmal neu bewertet                            |
 | Extraktion                     | Deterministisch aus dem HTML, kein LLM für die strukturierten Felder    |
-| „Budget"                       | Ist der **Stundensatz** (vom Maintainer bestätigt) → `rate_hourly_eur`  |
-| Umfang                         | Nur Backend; die Auswertung im Frontend folgt als eigener PR            |
+| „Budget"                       | Rohwert in `budget_eur`, Einordnung über `budget_kind` — siehe unten    |
+| Umfang                         | Nur Backend plus die Lauf-Zähler; die Auswertung folgt als eigener PR   |
+
+### Korrektur nach dem ersten echten Lauf
+
+Ursprünglich stand hier: „Budget ist der Stundensatz (vom Maintainer bestätigt) →
+`rate_hourly_eur`". Die ersten 149 abgerufenen Seiten haben das widerlegt. Das Badge heißt
+**immer** „Budget" und trägt keine Einheit; darin steckt dreierlei:
+
+| Größenordnung   | Bedeutung     | `budget_kind` |
+| --------------- | ------------- | ------------- |
+| bis 250 €       | Stundensatz   | `HOURLY`      |
+| bis 2.000 €     | Tagessatz     | `DAILY`       |
+| darüber         | Gesamtbudget  | `TOTAL`       |
+
+Eine Spalte namens `rate_hourly_eur` hätte für einen Teil der Zeilen etwas Falsches
+behauptet — ein Ø über alle Werte lag bei 53.714 €. Deshalb: Rohwert in `budget_eur`,
+Einordnung nach Größenordnung in `budget_kind`, und Auswertungen über Stundensätze zählen
+nur `HOURLY`. Die Schwellen sind eine Heuristik, weil die Seite nichts hergibt — die echten
+Daten trennen sie allerdings sauber (kein `HOURLY` über 200 €, kein `DAILY` unter 600 €).
+
+`0,00 €` ist ein leer gelassenes Feld und zählt als keine Angabe, nicht als Satz von null.
 
 ## Abruf
 
@@ -111,9 +131,10 @@ und für eine Marktbewertung ohne Wert.
 
 Flyway `V7` auf `offers`:
 
-| Spalte                | Typ            | Inhalt                                              |
-| --------------------- | -------------- | --------------------------------------------------- |
-| `rate_hourly_eur`     | `numeric(8,2)` | Stundensatz laut Budget-Badge                       |
+| Spalte                | Typ             | Inhalt                                             |
+| --------------------- | --------------- | -------------------------------------------------- |
+| `budget_eur`          | `numeric(12,2)` | Rohwert des Budget-Badges, ohne Einheit            |
+| `budget_kind`         | `text`          | `HOURLY` / `DAILY` / `TOTAL` nach Größenordnung    |
 | `duration_months`     | `int`          | Projektdauer in Monaten                             |
 | `utilization_percent` | `int`          | Auslastung                                          |
 | `remote_percent`      | `int`          | Remote-Anteil als Zahl                              |
@@ -180,6 +201,22 @@ Lauf-Ergebnis mitgeführt.
 - **`CollectService`**: Deckel `max-per-run` greift, ein Fehler beendet den Lauf nicht,
   `enabled=false` überspringt den Abruf vollständig.
 - Keine echten Netzwerkzugriffe in Tests.
+
+## Abdeckung über den gesamten Bestand
+
+Nach drei Läufen sind alle Angebote versorgt (428 `OK`, 3 `NOT_FOUND`):
+
+| Feld          | Abdeckung   | Kennzahl                                  |
+| ------------- | ----------- | ----------------------------------------- |
+| Beschreibung  | 428 / 431   | Ø 2.325 Zeichen                           |
+| Remote-Anteil | 388 / 431   |                                           |
+| Laufzeit      | 326 / 431   | Ø 8,8 Monate, Median 6                    |
+| Auslastung    | 257 / 431   |                                           |
+| Budget         | 44 / 431    | davon 31 `HOURLY` (Ø **83,35 €**), 7 `DAILY`, 6 `TOTAL` |
+
+Der Stundensatz ist also das dünnste Signal — rund jedes zehnte Projekt nennt überhaupt ein
+Budget, und nur zwei Drittel davon als Stundensatz. Auswertungen darauf müssen die
+Fallzahl mit ausweisen.
 
 ## Ergebnis der Gegenprobe
 
