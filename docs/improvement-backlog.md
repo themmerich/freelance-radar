@@ -41,7 +41,8 @@ Gemessen am Bestand vom 2026-08-09 (428 primäre Angebote seit 2026-07-20):
 
 4. ~~**Wählbarer Zeitraum statt fest verdrahteter Fenster**~~ — **erledigt am 2026-08-10.**
    Umschalter „30 Tage / 90 Tage / 12 Monate / Alles" über den Tabs, alle Charts beider Tabs
-   stellen um; die Auflösung wandert mit (Tage → Wochen → Monate).
+   stellen um; die Auflösung wandert mit (Tage → Wochen → Monate). Entwurf:
+   [`2026-08-10-dashboard-zeitraum-design.md`](superpowers/specs/2026-08-10-dashboard-zeitraum-design.md).
 
 5. **Trend-Deltas in den KPI-Kacheln** _(kleiner Eingriff, rein Frontend)_
    „30 Tage: 428 (+12 % ggü. Vorperiode)", ebenso für Ø Score und 🟢-Anteil —
