@@ -21,6 +21,13 @@ export const SCORE_TREND_KEY_PER_BUCKET: Record<Bucket, string> = {
   month: 'offers.charts.scoreTrendMonth',
 };
 
+/** Titel der Remote-Zeitreihe je Auflösung. */
+export const REMOTE_TREND_KEY_PER_BUCKET: Record<Bucket, string> = {
+  day: 'offers.charts.remoteTrendDay',
+  week: 'offers.charts.remoteTrendWeek',
+  month: 'offers.charts.remoteTrendMonth',
+};
+
 /**
  * Farben und Achsen-Optionen, die sich die Chart-Komponenten des Dashboards teilen.
  * Farben aus einer validierten Dataviz-Palette, jeweils für helle und dunkle

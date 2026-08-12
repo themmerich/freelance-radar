@@ -8,11 +8,13 @@ import { OffersStore } from '../data-access/offers-store';
 import { SettingsStore } from '../data-access/settings-store';
 import { ThemeStore } from '../../shared/data-access/theme-store';
 import {
+  averagePerBucket,
   averageScorePerAgent,
-  averageScorePerBucket,
   averageWithCount,
   bucketFor,
+  countByCountryGroup,
   countByRoleCategory,
+  countBySeniority,
   durationBuckets,
   durations,
   hourlyRates,
@@ -80,11 +82,14 @@ const TOP_SKILL_LIMIT = 10;
                       [counts]="counts()"
                       [bucket]="bucket()"
                       [remoteShare]="remoteShare()"
+                      [remoteTrend]="remoteTrend()"
                       [durations]="durationClasses()"
                       [rates]="rateClasses()"
                       [agents]="agents()"
                       [agentScores]="agentScores()"
                       [roles]="roles()"
+                      [seniority]="seniorityCounts()"
+                      [countries]="countryCounts()"
                       [dark]="theme.dark()"
                     />
                   </p-tabpanel>
@@ -150,8 +155,13 @@ export class OffersPage {
   protected readonly bucket = computed(() => bucketFor(this.settings.range()));
   protected readonly counts = computed(() => offersPerBucket(this.rangedOffers(), this.settings.range(), new Date()));
   protected readonly remoteShare = computed(() => remotePercentBuckets(this.rangedOffers()));
+  protected readonly remoteTrend = computed(() =>
+    averagePerBucket(this.rangedOffers(), (offer) => offer.remotePercent, this.settings.range(), new Date()),
+  );
   protected readonly durationClasses = computed(() => durationBuckets(this.rangedOffers()));
   protected readonly rateClasses = computed(() => rateBuckets(this.rangedOffers()));
+  protected readonly seniorityCounts = computed(() => countBySeniority(this.rangedOffers()));
+  protected readonly countryCounts = computed(() => countByCountryGroup(this.rangedOffers()));
 
   /** Kennzahlen der Marktzeile — jede mit der Fallzahl, auf der sie steht. */
   protected readonly averageRate = computed(() => averageWithCount(hourlyRates(this.rangedOffers())));
@@ -176,7 +186,9 @@ export class OffersPage {
   );
 
   protected readonly agentCounts = computed(() => offersPerBucket(this.agentOffers(), this.settings.range(), new Date()));
-  protected readonly agentScoreTrend = computed(() => averageScorePerBucket(this.agentOffers(), this.settings.range(), new Date()));
+  protected readonly agentScoreTrend = computed(() =>
+    averagePerBucket(this.agentOffers(), (offer) => offer.matchScore, this.settings.range(), new Date()),
+  );
   protected readonly agentHistogram = computed(() => scoreHistogram(this.agentOffers()));
   protected readonly agentSkills = computed(() => topSkills(this.agentOffers(), TOP_SKILL_LIMIT, false));
   protected readonly agentGaps = computed(() => topSkills(this.agentOffers(), TOP_SKILL_LIMIT, true));

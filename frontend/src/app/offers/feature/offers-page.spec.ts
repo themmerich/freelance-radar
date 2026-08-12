@@ -39,8 +39,13 @@ const en = {
       scoreTrendWeek: 'Avg match score per week',
       scoreTrendMonth: 'Avg match score per month',
       remoteShare: 'Remote share of the projects',
+      remoteTrendDay: 'Avg remote share per day',
+      remoteTrendWeek: 'Avg remote share per week',
+      remoteTrendMonth: 'Avg remote share per month',
       durations: 'Duration in months ({{count}} offers)',
       rates: 'Hourly rate distribution ({{count}} offers)',
+      seniority: 'Seniority',
+      countries: 'Project country',
       remoteUnknown: 'Unknown',
       agents: 'Triggers per agent',
       agentScores: 'Avg match score per agent',
@@ -61,6 +66,8 @@ const en = {
       empty: 'No offers from search agents yet.',
     },
     remote: { REMOTE: 'Remote', HYBRID: 'Hybrid', ONSITE: 'On-site' },
+    seniority: { junior: 'Junior', mid: 'Mid', senior: 'Senior', lead: 'Lead', architect: 'Architect', unknown: 'Unknown' },
+    countries: { other: 'Other', unknown: 'Unknown' },
   },
 };
 
@@ -115,14 +122,24 @@ const DAYS_AGO_200 = new Date(Date.now() - 200 * 24 * 60 * 60 * 1000).toISOStrin
 
 /**
  * 2× „AI“ (stärkster Agent), 1× „Angular“, 1 private Anfrage — Skills klar pro Agent getrennt.
- * Dazu ein altes „AI“-Angebot, das nur in weiten Zeiträumen mitzählt.
+ * Dazu ein altes „AI“-Angebot, das nur in weiten Zeiträumen mitzählt; Seniority, Land und
+ * Remote-Prozent unterscheiden sich bewusst zwischen jung und alt.
  */
 function defaultOffers(): Offer[] {
   return [
-    makeOffer({ agentName: 'AI', matchScore: 80, skills: [{ name: 'LLM', gap: false }] }),
+    makeOffer({
+      agentName: 'AI',
+      matchScore: 80,
+      seniority: 'senior',
+      country: 'DE',
+      remotePercent: 80,
+      skills: [{ name: 'LLM', gap: false }],
+    }),
     makeOffer({
       agentName: 'AI',
       matchScore: 60,
+      seniority: 'senior',
+      country: 'DE',
       skills: [
         { name: 'LLM', gap: false },
         { name: 'MCP', gap: true },
@@ -130,7 +147,14 @@ function defaultOffers(): Offer[] {
     }),
     makeOffer({ agentName: 'Angular', matchScore: 90, skills: [{ name: 'Kotlin', gap: true }] }),
     makeOffer({ sourceType: 'PRIVATE', agentName: null, skills: [{ name: 'Vue', gap: true }] }),
-    makeOffer({ agentName: 'AI', receivedAt: DAYS_AGO_200, matchScore: 50, skills: [{ name: 'Legacy', gap: false }] }),
+    makeOffer({
+      agentName: 'AI',
+      receivedAt: DAYS_AGO_200,
+      matchScore: 50,
+      seniority: 'junior',
+      country: 'US',
+      skills: [{ name: 'Legacy', gap: false }],
+    }),
   ];
 }
 
@@ -233,6 +257,23 @@ describe('OffersPage', () => {
         .counts()
         .counts.reduce((sum: number, count: number) => sum + count, 0),
     ).toBe(4);
+  });
+
+  it('feeds seniority, country and remote trend from the ranged offers', () => {
+    const fixture = createFixture();
+
+    // 30 Tage: nur die beiden jungen „senior“/DE-Angebote zählen, zwei bleiben unbekannt.
+    expect(offerCharts(fixture).seniority()).toEqual([0, 0, 2, 0, 0, 2]);
+    expect(offerCharts(fixture).countries()).toEqual([2, 0, 0, 0, 2]);
+    // Der heutige Bucket trägt den Remote-Prozentwert des einen Angebots, das ihn nennt.
+    expect(offerCharts(fixture).remoteTrend().averages.at(-1)).toBe(80);
+
+    range.set('all');
+    fixture.detectChanges();
+
+    // „Alles“ holt das 200 Tage alte Junior-Angebot aus den USA dazu.
+    expect(offerCharts(fixture).seniority()).toEqual([1, 0, 2, 0, 0, 2]);
+    expect(offerCharts(fixture).countries()).toEqual([2, 0, 0, 1, 2]);
   });
 
   it('widens the charts and coarsens the resolution when the range grows', () => {
