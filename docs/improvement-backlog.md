@@ -11,14 +11,14 @@ erst die Datenbasis, dann die Auswertungen, die darauf aufbauen.
 
 Gemessen am Bestand vom 2026-08-09 (428 primäre Angebote seit 2026-07-20):
 
-| Feld        | Füllgrad                   | Bewertung                                                        |
-| ----------- | -------------------------- | ---------------------------------------------------------------- |
-| `rate`      | 0 von 428                  | Parser-Regex greift bei freelancermap-Mails nie — Kernsignal fehlt |
-| `duration`  | 0 von 428                  | gleiches Bild                                                    |
-| `startDate` | 428, verschmutzt           | Werte wie „und Auslastung" neben „08/2026" und „ab sofort"       |
-| `industry`  | 40 von 428 (90 % unbekannt) | Branchenauswertung derzeit wertlos                               |
-| `seniority` | 316 von 428                | gut gefüllt, aber nirgends visualisiert                          |
-| `country`   | 403 von 428                | gut gefüllt, aber nirgends visualisiert                          |
+| Feld        | Füllgrad                    | Bewertung                                                          |
+| ----------- | --------------------------- | ------------------------------------------------------------------ |
+| `rate`      | 0 von 428                   | Parser-Regex greift bei freelancermap-Mails nie — Kernsignal fehlt |
+| `duration`  | 0 von 428                   | gleiches Bild                                                      |
+| `startDate` | 428, verschmutzt            | Werte wie „und Auslastung" neben „08/2026" und „ab sofort"         |
+| `industry`  | 40 von 428 (90 % unbekannt) | Branchenauswertung derzeit wertlos                                 |
+| `seniority` | 316 von 428                 | gut gefüllt, aber nirgends visualisiert                            |
+| `country`   | 403 von 428                 | gut gefüllt, aber nirgends visualisiert                            |
 
 ## A. Fundament
 
@@ -61,9 +61,12 @@ Gemessen am Bestand vom 2026-08-09 (428 primäre Angebote seit 2026-07-20):
    Top-Skills als Zeitreihe (Nennungen pro Woche/Monat, steigend/fallend) statt nur
    als Momentaufnahme: Was verlangt der Markt mehr als vor drei Monaten?
 
-7. **Brachliegende Felder visualisieren** _(zwei Charts zum Preis von null neuen Daten)_
-   Seniority-Verteilung und DE/AT/CH-Anteil aus vorhandenen Daten; Remote-Anteil
-   zusätzlich als Trendlinie statt nur als Donut.
+7. ~~**Brachliegende Felder visualisieren**~~ — **erledigt am 2026-08-12.** Drei neue
+   Charts im Global-Tab: Seniority-Verteilung (junior → architect plus Unbekannt),
+   Einsatzland (DE/AT/CH/Andere/Unbekannt) und Ø Remote-Anteil als Zeitreihe. Das im
+   Backlog erwähnte Donut gab es zu dem Zeitpunkt schon nicht mehr — die Trendlinie
+   ergänzt die Remote-Verteilung, die an seine Stelle getreten war. Entwurf:
+   [`2026-08-12-brachliegende-felder-design.md`](superpowers/specs/2026-08-12-brachliegende-felder-design.md).
 
 8. **Monats-/Wochenbericht als Digest** _(Weiterentwicklung des Obsidian-Export-Roadmap-Punkts)_
    Generierter Marktbericht (Volumen + Trend, Sätze, Top-Skills/Gaps, beste Matches),
@@ -91,7 +94,6 @@ werden Saisonalität und Jahresvergleiche möglich.
 
 ## Empfohlene Reihenfolge
 
-Erledigt sind 2 (Rate/Laufzeit), 4 (Zeitraum-Umschalter) und 5 (Deltas); 1 (Automatisierung)
-ist verworfen. Offen und in dieser Reihenfolge sinnvoll:
-6 (Skill-Trends) → 7 (brachliegende Felder) → 3 (`industry`) → Rest.
-Die Punkte 6 und 7 sind jeweils überschaubare eigene PRs.
+Erledigt sind 2 (Rate/Laufzeit), 4 (Zeitraum-Umschalter), 5 (Deltas) und 7 (brachliegende
+Felder); 1 (Automatisierung) ist verworfen. Offen und in dieser Reihenfolge sinnvoll:
+6 (Skill-Trends) → 3 (`industry`) → Rest. Punkt 6 ist ein überschaubarer eigener PR.
