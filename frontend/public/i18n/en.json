@@ -140,8 +140,13 @@
       "topGaps": "Top skill gaps",
       "scores": "Match score distribution",
       "remoteShare": "Remote share of the projects",
+      "remoteTrendDay": "Avg remote share per day",
+      "remoteTrendWeek": "Avg remote share per week",
+      "remoteTrendMonth": "Avg remote share per month",
       "durations": "Duration in months ({{count}} offers)",
-      "rates": "Hourly rate distribution ({{count}} offers)"
+      "rates": "Hourly rate distribution ({{count}} offers)",
+      "seniority": "Seniority",
+      "countries": "Project country"
     },
     "range": {
       "label": "Time range",
@@ -189,6 +194,18 @@
       "REMOTE": "Remote",
       "HYBRID": "Hybrid",
       "ONSITE": "On-site"
+    },
+    "seniority": {
+      "junior": "Junior",
+      "mid": "Mid",
+      "senior": "Senior",
+      "lead": "Lead",
+      "architect": "Architect",
+      "unknown": "Unknown"
+    },
+    "countries": {
+      "other": "Other",
+      "unknown": "Unknown"
     },
     "roleCategory": {
       "ARCHITECT": "Architect",

@@ -1,11 +1,12 @@
 import {
   AVERAGE_SCORE,
   OFFER_COUNT,
+  averagePerBucket,
   averageScorePerAgent,
-  averageScorePerBucket,
   averageWithCount,
   bucketFor,
-  countByRemote,
+  countByCountryGroup,
+  countBySeniority,
   durationBuckets,
   greenShareMetric,
   hourlyRates,
@@ -22,7 +23,7 @@ import {
   withinRange,
 } from './offer-stats';
 
-type StatsOffer = Parameters<typeof countByRemote>[0][number];
+type StatsOffer = Parameters<typeof withinRange>[0][number];
 
 const TODAY = new Date('2026-07-23T12:00:00');
 
@@ -33,6 +34,8 @@ function offer(overrides: Partial<StatsOffer>): StatsOffer {
     agentName: 'Angular',
     remote: null,
     role: null,
+    seniority: null,
+    country: null,
     matchScore: null,
     skills: [],
     budgetEur: null,
@@ -131,14 +134,15 @@ describe('offer-stats', () => {
       expect(result.average).toBe(0);
     });
 
-    it('averages scores per bucket and leaves buckets without analyzed offers null', () => {
-      const result = averageScorePerBucket(
+    it('averages the selected value per bucket and leaves buckets without values null', () => {
+      const result = averagePerBucket(
         [
           offer({ matchScore: 70 }),
           offer({ matchScore: 76 }),
           offer({ receivedAt: '2026-07-13T08:00:00', matchScore: 40 }),
           offer({ receivedAt: '2026-07-16T08:00:00', matchScore: null }),
         ],
+        (entry) => entry.matchScore,
         '90d',
         TODAY,
       );
@@ -148,6 +152,18 @@ describe('offer-stats', () => {
       expect(result.averages[11]).toBe(40);
       expect(result.averages[12]).toBe(73);
       expect(result.averages[10]).toBeNull();
+    });
+
+    it('averages whatever field the selector picks', () => {
+      const result = averagePerBucket(
+        [offer({ remotePercent: 100 }), offer({ remotePercent: 50 }), offer({ remotePercent: null })],
+        (entry) => entry.remotePercent,
+        '30d',
+        TODAY,
+      );
+
+      // Nur die beiden Angebote mit Remote-Angabe zählen — das dritte drückt den Schnitt nicht.
+      expect(result.averages[29]).toBe(75);
     });
 
     it('cuts offers to the window with the same start the buckets use', () => {
@@ -226,15 +242,34 @@ describe('offer-stats', () => {
     });
   });
 
-  it('counts remote levels in the fixed order remote, hybrid, onsite plus unknown', () => {
-    const result = countByRemote([
-      offer({ remote: 'REMOTE' }),
-      offer({ remote: 'ONSITE' }),
-      offer({ remote: 'REMOTE' }),
-      offer({ remote: null }),
+  it('counts seniority levels in the fixed order junior to architect plus unknown', () => {
+    const result = countBySeniority([
+      offer({ seniority: 'senior' }),
+      offer({ seniority: 'junior' }),
+      offer({ seniority: 'senior' }),
+      offer({ seniority: null }),
     ]);
 
-    expect(result).toEqual([2, 0, 1, 1]);
+    expect(result).toEqual([1, 0, 2, 0, 0, 1]);
+  });
+
+  it('counts a seniority outside the prompt list as unknown instead of dropping it', () => {
+    // Sollte der Analyse-Prompt je abweichen, wird das im Chart sichtbar statt still verschluckt.
+    const result = countBySeniority([offer({ seniority: 'principal' })]);
+
+    expect(result).toEqual([0, 0, 0, 0, 0, 1]);
+  });
+
+  it('groups countries into DE, AT, CH, other and unknown', () => {
+    const result = countByCountryGroup([
+      offer({ country: 'DE' }),
+      offer({ country: 'DE' }),
+      offer({ country: 'CH' }),
+      offer({ country: 'US' }),
+      offer({ country: null }),
+    ]);
+
+    expect(result).toEqual([2, 0, 1, 1, 1]);
   });
 
   it('averages scores per agent descending and skips unanalyzed or non-agent offers', () => {

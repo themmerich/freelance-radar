@@ -14,6 +14,12 @@ export const REMOTE_ORDER = ['REMOTE', 'HYBRID', 'ONSITE'] as const;
 
 export type RemoteType = (typeof REMOTE_ORDER)[number];
 
+/** Feste Reihenfolge der Seniority-Stufen — die fünf Werte, die der Analyse-Prompt vorgibt (`ClaudeOfferAnalyzer`). */
+export const SENIORITY_ORDER = ['junior', 'mid', 'senior', 'lead', 'architect'] as const;
+
+/** Ländergruppen des Einsatzland-Charts — der DACH-Markt ist das Zielgebiet, alles andere zählt als „Andere". */
+export const COUNTRY_GROUPS = ['DE', 'AT', 'CH'] as const;
+
 /** Ampel-Stufe eines Match-Scores (🟢/🟡/🔴) — Tabelle und Histogramm teilen die Regel. */
 export type ScoreTier = 'good' | 'warning' | 'critical';
 
@@ -64,6 +70,10 @@ type StatsOffer = {
   agentName: string | null;
   remote: RemoteType | null;
   role: string | null;
+  /** Seniority-Stufe aus der Analyse; erwartet werden die Werte aus `SENIORITY_ORDER`. */
+  seniority: string | null;
+  /** ISO-3166-Code des Einsatzlandes (DE/AT/CH, ...), von der Analyse abgeleitet. */
+  country: string | null;
   matchScore: number | null;
   skills: { name: string; gap: boolean }[];
   /** Rohwert des Budget-Badges der Projektseite; nur mit `budgetKind` zu lesen. */
@@ -238,26 +248,36 @@ export function offersPerBucket(offers: StatsOffer[], range: TimeRange, today: D
   return { labels: bucketLabels(start, count, bucket), counts, average: Math.round((total / count) * 10) / 10 };
 }
 
-/** Ø Match-Score je Bucket über das Fenster (ältester zuerst, gerundet). */
-export function averageScorePerBucket(offers: StatsOffer[], range: TimeRange, today: Date): BucketedAverages {
+/**
+ * Ø eines Angebotswerts je Bucket über das Fenster (ältester zuerst, gerundet) — der Wert
+ * kommt über den Selektor: Match-Score im Agenten-Tab, Remote-Prozent im Remote-Trend.
+ * Buckets ohne Werte bleiben `null` (Lücke im Linien-Chart).
+ */
+export function averagePerBucket(
+  offers: StatsOffer[],
+  value: (offer: StatsOffer) => number | null,
+  range: TimeRange,
+  today: Date,
+): BucketedAverages {
   const bucket = bucketFor(range);
   const start = rangeStart(offers, range, today);
   const count = bucketCount(start, range, today);
   const sums = new Array<number>(count).fill(0);
   const counts = new Array<number>(count).fill(0);
   for (const offer of offers) {
-    if (offer.matchScore === null) {
+    const offerValue = value(offer);
+    if (offerValue === null) {
       continue;
     }
     const index = bucketIndex(offer, start, bucket);
     if (index >= 0 && index < count) {
-      sums[index] += offer.matchScore;
+      sums[index] += offerValue;
       counts[index] += 1;
     }
   }
   return {
     labels: bucketLabels(start, count, bucket),
-    averages: counts.map((value, i) => (value === 0 ? null : Math.round(sums[i] / value))),
+    averages: counts.map((countInBucket, i) => (countInBucket === 0 ? null : Math.round(sums[i] / countInBucket))),
   };
 }
 
@@ -330,10 +350,23 @@ export function remotePercentBuckets(offers: StatsOffer[]): NamedCount[] {
   return classify(remotePercents(offers), REMOTE_CLASSES);
 }
 
-/** Verteilung Remote/Hybrid/Vor Ort in fester Reihenfolge; letzter Eintrag = nicht erkannt. */
-export function countByRemote(offers: StatsOffer[]): number[] {
-  const counts = REMOTE_ORDER.map((remote) => offers.filter((offer) => offer.remote === remote).length);
-  return [...counts, offers.filter((offer) => offer.remote === null).length];
+/**
+ * Verteilung der Seniority-Stufen in fester Reihenfolge; letzter Eintrag = unbekannt.
+ * Werte außerhalb der Prompt-Liste zählen ebenfalls als unbekannt, statt still
+ * herauszufallen — sollte der Prompt je abweichen, wird das im Chart sichtbar.
+ */
+export function countBySeniority(offers: StatsOffer[]): number[] {
+  const counts = SENIORITY_ORDER.map((level) => offers.filter((offer) => offer.seniority === level).length);
+  const known = counts.reduce((sum, count) => sum + count, 0);
+  return [...counts, offers.length - known];
+}
+
+/** Verteilung DE/AT/CH/Andere/Unbekannt — feste Gruppen, damit Exoten mit einem Treffer keinen langen Schwanz bilden. */
+export function countByCountryGroup(offers: StatsOffer[]): number[] {
+  const counts = COUNTRY_GROUPS.map((code) => offers.filter((offer) => offer.country === code).length);
+  const unknown = offers.filter((offer) => offer.country === null).length;
+  const other = offers.length - unknown - counts.reduce((sum, count) => sum + count, 0);
+  return [...counts, other, unknown];
 }
 
 /**
