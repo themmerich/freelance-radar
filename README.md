@@ -15,7 +15,7 @@ Ausgelöst per Knopfdruck — Tokens fließen nur, wenn ein Lauf bewusst gestart
 ![Java](https://img.shields.io/badge/Java-25-orange.svg)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791.svg)
 
-<img src="docs/screenshots/dashboard.png" alt="Dashboard mit KPI-Kacheln, Marktkennzahlen und den sieben Charts der Gesamtauswertung" width="900">
+<img src="docs/screenshots/dashboard.png" alt="Dashboard mit KPI-Kacheln, Marktkennzahlen und den zehn Charts der Gesamtauswertung" width="900">
 
 </div>
 
@@ -53,12 +53,14 @@ Projektbeschreibung statt der Teaser-Mail bewertet wird (davor waren es ~750).
   Tabs schneidet **alle** Auswertungen zu; die Zeitreihen ziehen ihre Auflösung mit
   (Tage → Wochen → Monate). Die Auswahl überlebt den Reload.
 - **Dashboard in zwei Tabs** — die KPI-Zeile (heute, 7 Tage, 30 Tage, gesamt, Ø Match-Score,
-  🟢-Anteil) steht mit festen Fenstern über beiden. _Gesamtauswertung_ zeigt die Marktsicht:
-  Marktkennzahlen (Ø Stundensatz, Ø Laufzeit, Ø Remote-Anteil) und sieben Charts — Volumen
-  mit Durchschnittslinie, Trigger und Ø Score je Suchagent, Remote-Anteil, Laufzeit- und
-  Stundensatz-Verteilung, angefragte Berufsprofile. _Agenten-Analyse_ zeigt Volumen und
-  Score-Trend plus Score-Histogramm mit Ampelfarben, Top-Skills und Top-Skill-Gaps — alles
-  gefiltert auf einen wählbaren Suchagenten.
+  🟢-Anteil) steht mit festen Fenstern über beiden; die Zähl-Kacheln tragen ihr **Trend-Delta
+  zur gleich langen Vorperiode**, die beiden Qualitätskacheln rechnen über die letzten 30 Tage.
+  _Gesamtauswertung_ zeigt die Marktsicht: Marktkennzahlen (Ø Stundensatz, Ø Laufzeit,
+  Ø Remote-Anteil) und zehn Charts — Volumen mit Durchschnittslinie, Trigger und Ø Score je
+  Suchagent, Remote-Verteilung und Remote-Anteil als Trendlinie, Laufzeit- und
+  Stundensatz-Verteilung, angefragte Berufsprofile, Seniorität und Einsatzland (DE/AT/CH).
+  _Agenten-Analyse_ zeigt Volumen und Score-Trend plus Score-Histogramm mit Ampelfarben,
+  Top-Skills und Top-Skill-Gaps — alles gefiltert auf einen wählbaren Suchagenten.
 - **Kennzahlen nennen ihre Fallzahl** — „Ø 83 €/h aus 31 Angeboten". Nur rund jedes zehnte
   Projekt beziffert überhaupt ein Budget; ein nackter Durchschnitt würde eine Marktaussage
   vortäuschen, die die Datenlage nicht hergibt.
@@ -163,13 +165,13 @@ Paketen zu je 50, damit die Modellantwort im Token-Limit bleibt.
 
 ## Projektstruktur
 
-| Pfad                                         | Inhalt                                                                   |
-| -------------------------------------------- | ------------------------------------------------------------------------ |
-| [`frontend/`](frontend/README.md)            | Angular-App; Bounded Contexts `offers`, `profiles`, `costs`, `shared`    |
+| Pfad                                         | Inhalt                                                                      |
+| -------------------------------------------- | --------------------------------------------------------------------------- |
+| [`frontend/`](frontend/README.md)            | Angular-App; Bounded Contexts `offers`, `profiles`, `costs`, `shared`       |
 | [`backend/`](backend/AGENTS.md)              | Spring-Boot-Service; Pakete `offer`, `profile`, `analyze`, `collect`, `run` |
-| [`style-guide/`](style-guide/style-guide.md) | Style-Guides je Dateityp (TypeScript, Templates, SCSS, a11y, Tests, Git) |
-| [`.claude/skills/`](SKILLS.md)               | Agent-Skills für wiederkehrende Aufgaben, indiziert in `SKILLS.md`       |
-| [`scripts/`](scripts/)                       | Verifikation: `verify.mjs` (Vollsuite) und der Claude-Code-Stop-Hook     |
+| [`style-guide/`](style-guide/style-guide.md) | Style-Guides je Dateityp (TypeScript, Templates, SCSS, a11y, Tests, Git)    |
+| [`.claude/skills/`](SKILLS.md)               | Agent-Skills für wiederkehrende Aufgaben, indiziert in `SKILLS.md`          |
+| [`scripts/`](scripts/)                       | Verifikation: `verify.mjs` (Vollsuite) und der Claude-Code-Stop-Hook        |
 
 Die Modulgrenzen sind nicht nur dokumentiert, sondern per
 [Sheriff](https://github.com/softarc-consulting/sheriff) in ESLint erzwungen:
@@ -253,10 +255,13 @@ Details und weitere Kandidaten im [Verbesserungs-Backlog](docs/improvement-backl
 - [x] Analyse mit Kostendeckel (Spring AI + Claude Haiku, Batch-Prompt)
 - [x] Auswertungen: KPI-Kacheln und Charts
 - [x] Profil-Verwaltung: mehrere Profile, Ergebnisse je Profil, Neubewertung mit Kostenvorschau
+- [x] Marktdaten von den Projektseiten: Stundensatz, Laufzeit, Remote-Anteil — deterministisch geparst, ohne Tokens
+- [x] Marktauswertungen: wählbarer Zeitraum, Trend-Deltas in den KPI-Kacheln, Seniority-, Länder- und Remote-Trend-Charts
+- [ ] Wochen-Trend je Skill: was verlangt der Markt mehr als vor drei Monaten?
+- [ ] `industry` schärfen oder streichen (heute 90 % „unbekannt")
+- [ ] Wochen-/Monatsbericht als Digest (Weiterentwicklung des Obsidian-Exports für Top-Matches)
+- [ ] Feedback-Schleife: Angebots-Status „beworben / interessant / irrelevant" gegen den Score halten
 - [ ] Vergleichsansicht: Ø Score und 🟢-Quote je Profil nebeneinander
-- [ ] Raten-Statistik und Wochen-Trend je Skill
-- [ ] Obsidian-Export für Top-Matches
-- [ ] Collect-Automatisierung per Task Scheduler (die Analyse bleibt manuell)
 
 ## Lizenz
 
