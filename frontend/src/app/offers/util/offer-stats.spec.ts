@@ -400,17 +400,17 @@ describe('offer-stats', () => {
     expect(result.today).toBe(1);
     expect(result.last7Days.value).toBe(2);
     expect(result.last30Days.value).toBe(3);
-    // Ohne Zeitfenster, aber nur analysiert — das Angebot vom Januar ist es nicht.
-    expect(result.total).toBe(3);
+    // Ohne Zeitfenster, auch unanalysierte zählen mit — das Angebot vom Januar also auch.
+    expect(result.total).toBe(4);
     // Beide Qualitätskacheln rechnen über 30 Tage; das Angebot vom Januar fällt heraus.
     expect(result.averageScore.value).toBe(60);
     expect(result.greenShare.value).toBe(33);
   });
 
-  it('reports null score kpis while nothing is analyzed', () => {
+  it('counts an unanalyzed offer in total but reports no score', () => {
     const result = kpis([offer({})], 70, TODAY);
 
-    expect(result.total).toBe(0);
+    expect(result.total).toBe(1);
     expect(result.averageScore.value).toBeNull();
     expect(result.greenShare.value).toBeNull();
   });
