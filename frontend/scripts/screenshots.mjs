@@ -49,7 +49,10 @@ const SKILLS = ['Angular', 'TypeScript', 'Java', 'Spring Boot', 'Kubernetes', 'A
 const GAP_SKILLS = ['C#', 'OpenShift', 'React', 'Python', '.NET'];
 const LOCATIONS = ['Hamburg', 'München', 'Berlin', 'Frankfurt', 'Wien', 'Zürich'];
 const REMOTE = ['REMOTE', 'HYBRID', 'ONSITE'];
-const COUNTRIES = ['DE', 'DE', 'DE', 'AT', 'CH'];
+// null dabei, damit der „Unbekannt"-Balken des Einsatzland-Charts nicht leer wirkt; NL füllt „Andere".
+const COUNTRIES = ['DE', 'DE', 'DE', 'DE', 'AT', 'CH', 'NL', null];
+// Volle Spannweite plus null — das Seniority-Chart zeigt sonst nur zwei von sechs Balken.
+const SENIORITIES = ['junior', 'mid', 'mid', 'senior', 'senior', 'senior', 'lead', 'architect', null];
 
 /**
  * Budget wie auf den echten Projektseiten: meistens fehlt es, sonst ist es überwiegend ein
@@ -124,7 +127,7 @@ function buildOffers() {
         matchScore >= 70
           ? 'Kern-Stack trifft das Profil, remote-freundliches Enterprise-Umfeld.'
           : 'Teilweise passend — Schwerpunkt liegt neben dem Profil.',
-      seniority: random() > 0.4 ? 'senior' : 'mid',
+      seniority: pick(SENIORITIES),
       industry: random() > 0.7 ? 'Banking' : 'unbekannt',
       primary: random() > 0.2,
       dupCount: random() > 0.75 ? 2 : 1,
