@@ -120,7 +120,7 @@ export type Kpis = {
   today: number;
   last7Days: Trend;
   last30Days: Trend;
-  /** Alle analysierten Angebote ohne Zeitfenster — Kopien anderer Agenten zählen wie überall nicht mit. */
+  /** Alle Angebote ohne Zeitfenster, analysiert oder nicht — Kopien anderer Agenten zählen wie überall nicht mit. */
   total: number;
   /** Ø Match-Score der letzten 30 Tage; null solange darin nichts analysiert ist. */
   averageScore: Trend;
@@ -572,7 +572,9 @@ export function kpis(offers: StatsOffer[], greenThreshold: number, today: Date):
     today: offers.filter((offer) => startOfDay(new Date(offer.receivedAt)).getTime() >= todayStart).length,
     last7Days: trend(offers, 7, OFFER_COUNT, today),
     last30Days: trend(offers, 30, OFFER_COUNT, today),
-    total: analyzedOffers(offers).length,
+    // Dasselbe Maß wie die Fenster-Kacheln (Rohvolumen) — sonst kann „Total" unter „30 Tage"
+    // fallen, sobald ein Teil des jüngsten Zulaufs noch auf die Analyse wartet.
+    total: offers.length,
     averageScore: trend(offers, 30, AVERAGE_SCORE, today),
     greenShare: trend(offers, 30, greenShareMetric(greenThreshold), today),
   };

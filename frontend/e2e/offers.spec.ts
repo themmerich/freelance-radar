@@ -153,8 +153,9 @@ test.describe('Offers dashboard e2e', () => {
     // Ein analysiertes Angebot mit Score 85 bei Schwelle 70 → Anteil 🟢 = 100 %.
     // Auf die Kachel eingegrenzt, seit „+100 %" auch als Trend-Delta vorkommen kann.
     await expect(page.locator('dl > div').filter({ hasText: 'Share 🟢' })).toContainText('100 %');
-    // Gesamt zählt ohne Zeitfenster; die Kopie des zweiten Agenten bleibt außen vor.
-    await expect(page.locator('dl > div').filter({ hasText: 'Total' })).toContainText('1');
+    // Gesamt zählt ohne Zeitfenster, auch unanalysierte (die 3 TREND_OFFERS); die Kopie
+    // des zweiten Agenten bleibt außen vor.
+    await expect(page.locator('dl > div').filter({ hasText: 'Total' })).toContainText('4');
 
     // Die KPI-Kacheln stehen über beiden Tabs; die 10 globalen Charts liegen im Auftakt-Tab.
     await expect(page.getByRole('tabpanel').locator('canvas')).toHaveCount(10);
